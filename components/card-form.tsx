@@ -45,7 +45,7 @@ export function blankCard(): Card {
 
 const DEFAULT_IDIOMA: IdiomaInfo = { lengua: 'en', dominio: 'software', nivel: 'B1', registro: 'neutro', falsos_amigos: [], audio: true }
 
-function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
+export function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>

@@ -113,6 +113,54 @@ export function parseCards(text: string, options: NormalizeOptions): ParseResult
   return { cards, errors }
 }
 
+/**
+ * Valida un JSON como biblioteca completa (tarjetas ya formadas, con id/srs/creada
+ * propios), sin rellenar valores por defecto. Pensada para "importar biblioteca
+ * completa" en Ajustes, a diferencia de parseCards (que sí completa valores y se usa
+ * en el flujo de Crear con IA).
+ */
+export function validateFullLibrary(text: string): ParseResult {
+  const src = extractJson(text)
+  if (!src) return { cards: [], errors: [{ ruta: 'documento', mensaje: 'Pega o selecciona el JSON de tu biblioteca.' }] }
+
+  let data: unknown
+  try {
+    data = JSON.parse(src)
+  } catch (err) {
+    return { cards: [], errors: [describeJsonError(err, src)] }
+  }
+
+  const list: unknown[] = Array.isArray(data)
+    ? data
+    : data && typeof data === 'object' && Array.isArray((data as { tarjetas?: unknown }).tarjetas)
+      ? (data as { tarjetas: unknown[] }).tarjetas
+      : []
+
+  if (list.length === 0) return { cards: [], errors: [{ ruta: 'documento', mensaje: 'Se esperaba un arreglo de tarjetas o { "tarjetas": [...] }.' }] }
+
+  const FULL_LIBRARY_FIELDS = ['id', 'origen', 'estado', 'creada', 'srs'] as const
+
+  const errors: ImportError[] = []
+  const cards: Card[] = []
+  list.forEach((raw, i) => {
+    if (!validateCard(raw)) {
+      const errs = validateCard.errors ?? []
+      localizeEs(errs)
+      const meaningful = errs.filter((e) => e.keyword !== 'if' && e.keyword !== 'allOf')
+      for (const e of meaningful) errors.push(formatAjvError(e, i))
+      return
+    }
+    const r = raw as Record<string, unknown>
+    const faltantes = FULL_LIBRARY_FIELDS.filter((f) => r[f] == null)
+    if (faltantes.length > 0) {
+      errors.push({ ruta: `tarjeta ${i + 1}`, mensaje: `no parece una tarjeta ya exportada: falta "${faltantes.join('", "')}"` })
+      return
+    }
+    cards.push(raw as unknown as Card)
+  })
+  return { cards, errors }
+}
+
 export interface DuplicateMatch {
   existing: Card
   score: number
