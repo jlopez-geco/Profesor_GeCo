@@ -21,6 +21,17 @@
     "respuesta": { "type": "string", "minLength": 1, "maxLength": 8000 },
     "explicacion": { "type": "string", "maxLength": 8000 },
     "ejemplo": { "type": "string", "maxLength": 4000 },
+    "escala": {
+      "type": "object",
+      "description": "Lecturas opcionales de una tarjeta de concepto a distinto nivel. 'respuesta' es siempre el nivel SWE (profesional estándar); estos son adicionales.",
+      "properties": {
+        "nino": { "type": "string", "maxLength": 2000, "description": "Explicación para niños (ELI5)" },
+        "adulto": { "type": "string", "maxLength": 2000, "description": "Analogía para un adulto sin contexto técnico" },
+        "senior": { "type": "string", "maxLength": 4000, "description": "Cuidados y errores comunes, nivel senior" },
+        "practica": { "type": "string", "maxLength": 4000, "description": "Ejercicios sugeridos para practicar el concepto" }
+      },
+      "additionalProperties": false
+    },
     "opciones": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },

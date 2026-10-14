@@ -10,8 +10,6 @@ import { Page, PageHeader } from '@/components/page-header'
 import { EmptyState, LoadingBlock } from '@/components/empty-state'
 import { Onboarding } from '@/components/today/onboarding'
 import { useCards, useReviews, useSession, useSettings } from '@/hooks/use-data'
-import { useEffectsEnabled } from '@/hooks/use-effects-enabled'
-import { LazyParticlesBackground } from '@/components/effects/lazy-particles-background'
 import { buildQueue, isStudyable } from '@/lib/queue'
 import { isSessionPending, startSession } from '@/lib/session'
 import { streak, todayReviews } from '@/lib/stats'
@@ -31,7 +29,6 @@ export function TodayView() {
   const settings = useSettings()
   const session = useSession()
   const [starting, setStarting] = useState(false)
-  const effects = useEffectsEnabled()
 
   const data = useMemo(() => {
     if (!cards || !reviews || !settings) return null
@@ -83,8 +80,7 @@ export function TodayView() {
   const goalPct = Math.min(100, Math.round((data.hoyMs / goalMs) * 100))
 
   return (
-    <Page className="relative">
-      {effects && <LazyParticlesBackground className="pointer-events-none absolute inset-0 -z-10" />}
+    <Page>
       <PageHeader title={`${greeting()}.`} description="Este es tu repaso de hoy." />
 
       <div className="grid gap-4 lg:grid-cols-3">

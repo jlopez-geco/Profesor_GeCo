@@ -1,21 +1,42 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { Page, PageHeader } from '@/components/page-header'
+import { Page as PageLayout, PageHeader } from '@/components/page-header'
+import { LoadingBlock } from '@/components/empty-state'
 import { CardForm, blankCard } from '@/components/card-form'
 import { useCategories } from '@/hooks/use-categories'
+import { useCards } from '@/hooks/use-data'
 import { tarjetasRepo } from '@/lib/tarjetas-repo'
+import { CARD_TYPES, type Card, type CardType } from '@/lib/types'
 
-export default function NewCardPage() {
+/** Última categoría usada en la biblioteca: evita que crear algo se sienta engorroso. */
+function ultimaCategoria(cards: Card[]) {
+  return [...cards].sort((a, b) => b.creada.localeCompare(a.creada))[0]?.categoria ?? ''
+}
+
+function NuevaTarjetaContent() {
   const router = useRouter()
+  const params = useSearchParams()
   const categories = useCategories()
-  const [initial] = useState(blankCard)
+  const cards = useCards()
+
+  if (!cards) {
+    return (
+      <PageLayout>
+        <LoadingBlock />
+      </PageLayout>
+    )
+  }
+
+  const tipoParam = params.get('tipo')
+  const tipo = (CARD_TYPES as readonly string[]).includes(tipoParam ?? '') ? (tipoParam as CardType) : undefined
+  const initial: Card = { ...blankCard(), ...(tipo && { tipo }), categoria: ultimaCategoria(cards) }
 
   return (
-    <Page className="max-w-6xl">
-      <PageHeader title="Nueva tarjeta" description="Las tarjetas manuales entran directo a tus repasos." />
+    <PageLayout className="max-w-6xl">
+      <PageHeader title="Nueva tarjeta" description="Las tarjetas manuales entran directo a tus repasos. Sugerimos la categoría por ti; cámbiala si no calza." />
       <CardForm
         initial={initial}
         categories={categories}
@@ -26,6 +47,20 @@ export default function NewCardPage() {
           router.push('/biblioteca')
         }}
       />
-    </Page>
+    </PageLayout>
+  )
+}
+
+export default function Page() {
+  return (
+    <Suspense
+      fallback={
+        <PageLayout>
+          <LoadingBlock />
+        </PageLayout>
+      }
+    >
+      <NuevaTarjetaContent />
+    </Suspense>
   )
 }

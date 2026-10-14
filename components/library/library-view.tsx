@@ -26,6 +26,9 @@ import { CARD_TYPES, CARD_TYPE_LABEL, type Card } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type View = 'lista' | 'cuadricula'
+type Vista = 'tarjetas' | 'aprendizaje' | 'todas'
+
+const TIPOS_APRENDIZAJE = CARD_TYPES.filter((t) => t !== 'concepto')
 
 export function LibraryView() {
   const router = useRouter()
@@ -34,6 +37,13 @@ export function LibraryView() {
   const categories = useCategories()
   const effects = useEffectsEnabled()
 
+  const [vista, setVista] = useState<Vista>(() => {
+    const v = params.get('vista')
+    if (v === 'aprendizaje' || v === 'tarjetas') return v
+    // Un deep link como "?estado=borrador" (desde Hoy) no sabe en qué vista están esas
+    // tarjetas: no restringimos por vista hasta que la persona elija una pestaña.
+    return params.get('estado') ? 'todas' : 'tarjetas'
+  })
   const [q, setQ] = useState('')
   const [categoria, setCategoria] = useState('')
   const [etiqueta, setEtiqueta] = useState('')
@@ -45,13 +55,28 @@ export function LibraryView() {
   const [moveTo, setMoveTo] = useState('')
   const [newTag, setNewTag] = useState('')
 
+  function changeVista(v: Vista) {
+    setVista(v)
+    setTipo('')
+    setSelected(new Set())
+  }
+
   const tags = useMemo(() => [...new Set((cards ?? []).flatMap((c) => c.etiquetas))].sort(), [cards])
+
+  const conteoVistas = useMemo(() => {
+    const activas = (cards ?? []).filter((c) => !c.archivada)
+    return {
+      tarjetas: activas.filter((c) => c.tipo === 'concepto').length,
+      aprendizaje: activas.filter((c) => c.tipo !== 'concepto').length,
+    }
+  }, [cards])
 
   const filtered = useMemo(() => {
     if (!cards) return []
     const nq = normalizeText(q)
     return cards
       .filter((c) => {
+        if (vista !== 'todas' && (vista === 'tarjetas' ? c.tipo !== 'concepto' : c.tipo === 'concepto')) return false
         if (estado === 'archivada') {
           if (!c.archivada) return false
         } else if (c.archivada) return false
@@ -64,7 +89,7 @@ export function LibraryView() {
         return true
       })
       .sort((a, b) => b.creada.localeCompare(a.creada))
-  }, [cards, q, categoria, etiqueta, tipo, origen, estado])
+  }, [cards, vista, q, categoria, etiqueta, tipo, origen, estado])
 
   const allSelected = filtered.length > 0 && filtered.every((c) => selected.has(c.id))
   const hasFilters = q || categoria || etiqueta || tipo || origen || estado
@@ -99,10 +124,16 @@ export function LibraryView() {
   return (
     <Page className="max-w-6xl">
       <PageHeader
-        title="Biblioteca"
-        description={`${cards.filter((c) => !c.archivada).length} tarjetas activas.`}
+        title={vista === 'tarjetas' ? 'Biblioteca de tarjetas' : vista === 'aprendizaje' ? 'Biblioteca de aprendizaje' : 'Biblioteca'}
+        description={
+          vista === 'tarjetas'
+            ? `El universo completo de conceptos: ${conteoVistas.tarjetas} tarjetas de referencia.`
+            : vista === 'aprendizaje'
+              ? `Lo que practicas a diario: ${conteoVistas.aprendizaje} preguntas y desafíos.`
+              : 'Elige una pestaña para distinguir tus conceptos de referencia de tus preguntas de práctica.'
+        }
         actions={
-          <Link href="/biblioteca/nueva" className={buttonVariants({ className: 'h-10' })}>
+          <Link href={`/biblioteca/nueva?tipo=${vista === 'aprendizaje' ? 'alternativas' : 'concepto'}`} className={buttonVariants({ className: 'h-10' })}>
             <Plus data-icon="inline-start" />
             Nueva tarjeta
           </Link>
@@ -120,6 +151,15 @@ export function LibraryView() {
         </EmptyState>
       ) : (
         <div className="flex flex-col gap-4">
+          <div role="tablist" aria-label="Biblioteca" className="flex gap-2">
+            <Button type="button" role="tab" aria-selected={vista === 'tarjetas'} variant={vista === 'tarjetas' ? 'default' : 'outline'} onClick={() => changeVista('tarjetas')}>
+              Tarjetas <Badge variant="secondary" className="ml-1">{conteoVistas.tarjetas}</Badge>
+            </Button>
+            <Button type="button" role="tab" aria-selected={vista === 'aprendizaje'} variant={vista === 'aprendizaje' ? 'default' : 'outline'} onClick={() => changeVista('aprendizaje')}>
+              Aprendizaje <Badge variant="secondary" className="ml-1">{conteoVistas.aprendizaje}</Badge>
+            </Button>
+          </div>
+
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
               <div className="relative flex-1">
@@ -143,10 +183,18 @@ export function LibraryView() {
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
+            <div className={cn('grid grid-cols-2 gap-2', vista === 'tarjetas' ? 'md:grid-cols-4' : 'md:grid-cols-5')}>
               <NativeSelect aria-label="Categoría" value={categoria} onChange={(e) => setCategoria(e.target.value)} placeholder="Todas las categorías" options={categories.map((c) => ({ value: c, label: c }))} />
               <NativeSelect aria-label="Etiqueta" value={etiqueta} onChange={(e) => setEtiqueta(e.target.value)} placeholder="Todas las etiquetas" options={tags.map((t) => ({ value: t, label: t }))} />
-              <NativeSelect aria-label="Tipo" value={tipo} onChange={(e) => setTipo(e.target.value)} placeholder="Todos los tipos" options={CARD_TYPES.map((t) => ({ value: t, label: CARD_TYPE_LABEL[t] }))} />
+              {vista !== 'tarjetas' && (
+                <NativeSelect
+                  aria-label="Tipo"
+                  value={tipo}
+                  onChange={(e) => setTipo(e.target.value)}
+                  placeholder="Todos los tipos"
+                  options={(vista === 'todas' ? CARD_TYPES : TIPOS_APRENDIZAJE).map((t) => ({ value: t, label: CARD_TYPE_LABEL[t] }))}
+                />
+              )}
               <NativeSelect aria-label="Origen" value={origen} onChange={(e) => setOrigen(e.target.value)} placeholder="Cualquier origen" options={[{ value: 'manual', label: 'Manual' }, { value: 'ia', label: 'IA' }]} />
               <NativeSelect
                 aria-label="Estado"

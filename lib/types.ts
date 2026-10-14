@@ -82,6 +82,24 @@ export interface IdiomaInfo {
   audio?: boolean
 }
 
+/**
+ * Lecturas opcionales de una tarjeta de concepto a distinto nivel. `respuesta` es
+ * siempre el nivel SWE (profesional estándar); estos son lentes adicionales.
+ */
+export interface Escala {
+  nino?: string
+  adulto?: string
+  senior?: string
+  practica?: string
+}
+
+export const ESCALA_LABEL: Record<keyof Escala, string> = {
+  nino: 'Niño',
+  adulto: 'Adulto',
+  senior: 'Senior',
+  practica: 'Práctica',
+}
+
 export interface Card {
   id: string
   tipo: CardType
@@ -92,6 +110,7 @@ export interface Card {
   respuesta: string
   explicacion?: string
   ejemplo?: string
+  escala?: Escala
   opciones?: string[]
   correcta?: number | string
   idioma?: IdiomaInfo

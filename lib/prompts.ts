@@ -29,6 +29,12 @@ const EXAMPLE_TECH = `{
       "pregunta": "¿Qué hace \`auth.uid()\` dentro de una política RLS?",
       "respuesta": "Devuelve el id del usuario autenticado que hace la consulta, para compararlo con la columna dueña de la fila.",
       "ejemplo": "\`\`\`sql\\ncreate policy \\"propias\\" on notas for select using (auth.uid() = user_id);\\n\`\`\`",
+      "escala": {
+        "nino": "Es como un gafete con tu nombre: la puerta solo te deja pasar a ti, aunque haya muchas puertas iguales.",
+        "adulto": "Piensa en un casillero con muchas llaves iguales por fuera, pero que solo abre la del dueño.",
+        "senior": "- auth.uid() es null si la consulta no viene autenticada: una política que solo compara con user_id sin manejar ese caso puede devolver de más o de menos según el rol.",
+        "practica": "- Escribe una política que use auth.uid() y pruébala con dos usuarios distintos."
+      },
       "dificultad": "intermedia"
     }
   ]
@@ -75,6 +81,7 @@ ${i.capa?.trim() ? `- Capa: "${i.capa.trim()}".` : '- Indica en "capa" la capa a
 - "alternativas": 4 opciones plausibles, "correcta" es el índice desde 0.
 - "cloze": marca el hueco en "pregunta" con ____ y pon el texto exacto en "correcta".
 - "desafio_codigo": un mini ejercicio de 3 a 10 minutos; en "respuesta" la solución en un bloque de código y en "explicacion" por qué funciona.
+- "concepto": "respuesta" es la explicación nivel SWE (profesional estándar). Agrega además "escala" con "nino" (ELI5, una analogía simple de uso diario), "adulto" (una analogía más elaborada para quien no es técnico), "senior" (2 a 4 errores comunes o cuidados) y "practica" (2 a 4 ejercicios cortos para practicarlo). Si algún nivel no aporta, omítelo.
 - Prioriza lo que se usa en el trabajo diario y los errores comunes.
 
 ${RULES}

@@ -14,6 +14,9 @@ importers:
       '@tsparticles/engine':
         specifier: ^4.4.0
         version: 4.4.0
+      '@tsparticles/path-perlin-noise':
+        specifier: ^4.4.0
+        version: 4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/noise-field@4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0)))(@tsparticles/perlin-noise@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0))
       '@tsparticles/react':
         specifier: ^4.4.0
         version: 4.4.0(@tsparticles/engine@4.4.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -1119,6 +1122,23 @@ packages:
     peerDependencies:
       '@tsparticles/engine': 4.4.0
       '@tsparticles/plugin-interactivity': 4.4.0
+
+  '@tsparticles/noise-field@4.4.0':
+    resolution: {integrity: sha512-m72X4eBAq/2DhhznhTiTtSri2+iEeEzWlDspKrMWf292I78Oa5bcKDmIXmonLaPozAba1s65rgtRixBw2fnw1g==}
+    peerDependencies:
+      '@tsparticles/engine': 4.4.0
+      '@tsparticles/plugin-move': 4.4.0
+
+  '@tsparticles/path-perlin-noise@4.4.0':
+    resolution: {integrity: sha512-RsQxMPs4U7pasatRs5uMRH7ggdIcNxWRTy4sY2VW/Dft8VEovNBnYp57t8obIn4EVdMtUUG9GL/P32MiFQkduQ==}
+    peerDependencies:
+      '@tsparticles/engine': 4.4.0
+      '@tsparticles/noise-field': 4.4.0
+      '@tsparticles/perlin-noise': 4.4.0
+      '@tsparticles/plugin-move': 4.4.0
+
+  '@tsparticles/perlin-noise@4.4.0':
+    resolution: {integrity: sha512-GP18nSZNcB4KDWFsT75X16s/Bn/pa5zIdjr5ym64HEM8hsOV1+byEzGnXxbmmJVkyp4RIGplrIP9Qon5rwEaHQ==}
 
   '@tsparticles/plugin-blend@4.4.0':
     resolution: {integrity: sha512-X/SG2WIasgHqA+fLZFu6MMv3z5VY5uX4VIfKjXz1qxZjEjn0w4kzZrbtZBxXxRKdrm8Dg8Qu2mmBokNZ8Bny3g==}
@@ -3947,6 +3967,20 @@ snapshots:
       '@tsparticles/canvas-utils': 4.4.0(@tsparticles/engine@4.4.0)
       '@tsparticles/engine': 4.4.0
       '@tsparticles/plugin-interactivity': 4.4.0(@tsparticles/engine@4.4.0)
+
+  '@tsparticles/noise-field@4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0))':
+    dependencies:
+      '@tsparticles/engine': 4.4.0
+      '@tsparticles/plugin-move': 4.4.0(@tsparticles/engine@4.4.0)
+
+  '@tsparticles/path-perlin-noise@4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/noise-field@4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0)))(@tsparticles/perlin-noise@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0))':
+    dependencies:
+      '@tsparticles/engine': 4.4.0
+      '@tsparticles/noise-field': 4.4.0(@tsparticles/engine@4.4.0)(@tsparticles/plugin-move@4.4.0(@tsparticles/engine@4.4.0))
+      '@tsparticles/perlin-noise': 4.4.0
+      '@tsparticles/plugin-move': 4.4.0(@tsparticles/engine@4.4.0)
+
+  '@tsparticles/perlin-noise@4.4.0': {}
 
   '@tsparticles/plugin-blend@4.4.0(@tsparticles/engine@4.4.0)':
     dependencies:
