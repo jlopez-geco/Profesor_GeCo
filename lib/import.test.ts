@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findDuplicate, mergeReplace, parseCards } from '@/lib/import'
+import { findDuplicate, mergeReplace, parseCards, validateFullLibrary } from '@/lib/import'
 import { emptySrs } from '@/lib/srs'
 import type { Card } from '@/lib/types'
 
@@ -73,6 +73,31 @@ describe('findDuplicate', () => {
     const incoming = card({ id: 'nueva', pregunta: '¿Qué es una URL prefirmada de S3?' })
     const dup = findDuplicate(incoming, [existing])
     expect(dup).toBeNull()
+  })
+})
+
+describe('validateFullLibrary', () => {
+  it('acepta un arreglo de tarjetas ya completas (con id, creada y srs propios)', () => {
+    const existing = card()
+    const json = JSON.stringify([existing])
+    const { cards, errors } = validateFullLibrary(json)
+    expect(errors).toHaveLength(0)
+    expect(cards).toEqual([existing])
+  })
+
+  it('no rellena valores por defecto: una tarjeta incompleta queda como error, no se completa', () => {
+    const json = JSON.stringify([{ tipo: 'concepto', categoria: 'Test', pregunta: 'P', respuesta: 'R' }])
+    const { cards, errors } = validateFullLibrary(json)
+    expect(cards).toHaveLength(0)
+    expect(errors.length).toBeGreaterThan(0)
+  })
+
+  it('acepta el formato { "tarjetas": [...] }', () => {
+    const existing = card()
+    const json = JSON.stringify({ tarjetas: [existing] })
+    const { cards, errors } = validateFullLibrary(json)
+    expect(errors).toHaveLength(0)
+    expect(cards).toHaveLength(1)
   })
 })
 
