@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://profesor-geco/schemas/tarjeta.json",
+  "title": "Tarjeta de Profesor GeCo",
+  "type": "object",
+  "required": ["tipo", "categoria", "pregunta", "respuesta"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "tipo": {
+      "type": "string",
+      "enum": ["concepto", "vocabulario", "gramatica", "cloze", "alternativas", "desafio_codigo"]
+    },
+    "categoria": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "capa": { "type": "string", "maxLength": 60 },
+    "etiquetas": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "maxLength": 40 },
+      "maxItems": 20
+    },
+    "pregunta": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "respuesta": { "type": "string", "minLength": 1, "maxLength": 8000 },
+    "explicacion": { "type": "string", "maxLength": 8000 },
+    "ejemplo": { "type": "string", "maxLength": 4000 },
+    "opciones": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 2,
+      "maxItems": 6
+    },
+    "correcta": {
+      "oneOf": [{ "type": "integer", "minimum": 0 }, { "type": "string", "minLength": 1 }]
+    },
+    "idioma": {
+      "type": "object",
+      "required": ["lengua", "dominio", "nivel"],
+      "properties": {
+        "lengua": { "type": "string", "enum": ["en", "fr"] },
+        "dominio": {
+          "type": "string",
+          "enum": ["conversacional", "software", "legal", "finanzas", "sostenibilidad"]
+        },
+        "nivel": { "type": "string", "enum": ["A1", "A2", "B1", "B2", "C1"] },
+        "registro": { "type": "string", "enum": ["formal", "neutro", "informal"] },
+        "falsos_amigos": { "type": "array", "items": { "type": "string" } },
+        "audio": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "dificultad": { "type": "string", "enum": ["basica", "intermedia", "avanzada"] },
+    "origen": { "type": "string", "enum": ["manual", "ia"] },
+    "estado": { "type": "string", "enum": ["borrador", "revisada"] },
+    "creada": { "type": "string", "format": "date-time" },
+    "archivada": { "type": "boolean" },
+    "srs": {
+      "type": "object",
+      "required": ["due", "state"],
+      "properties": {
+        "due": { "type": "string", "format": "date-time" },
+        "stability": { "type": "number", "minimum": 0 },
+        "difficulty": { "type": "number", "minimum": 0 },
+        "reps": { "type": "integer", "minimum": 0 },
+        "lapses": { "type": "integer", "minimum": 0 },
+        "state": { "type": "string", "enum": ["nueva", "aprendiendo", "repaso", "reaprendiendo"] },
+        "scheduled_days": { "type": "number" },
+        "learning_steps": { "type": "number" },
+        "last_review": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "tipo": { "const": "alternativas" } } },
+      "then": { "required": ["opciones", "correcta"] }
+    },
+    {
+      "if": { "properties": { "tipo": { "enum": ["vocabulario", "gramatica"] } } },
+      "then": { "required": ["idioma"] }
+    }
+  ]
+}
