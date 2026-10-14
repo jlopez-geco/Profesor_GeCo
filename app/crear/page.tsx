@@ -21,9 +21,11 @@ import {
   CARD_TYPE_LABEL,
   DIFICULTADES,
   DIFICULTAD_LABEL,
+  DOMINIOS_POR_LENGUA,
   DOMINIO_LABEL,
   LENGUAS,
   LENGUA_LABEL,
+  NIVELES_POR_LENGUA,
   REGISTROS,
   type CardType,
   type Dificultad,
@@ -35,16 +37,6 @@ import {
 
 type Modo = 'tecnica' | 'idioma'
 type Paso = 'elegir' | 'pegar'
-
-/** Francés solo cubre conversacional A1-B1 (A6); inglés cubre los 5 dominios y A1-C1. */
-const DOMINIOS_POR_LENGUA: Record<Lengua, Dominio[]> = {
-  en: ['conversacional', 'software', 'legal', 'finanzas', 'sostenibilidad'],
-  fr: ['conversacional'],
-}
-const NIVELES_POR_LENGUA: Record<Lengua, Nivel[]> = {
-  en: ['A1', 'A2', 'B1', 'B2', 'C1'],
-  fr: ['A1', 'A2', 'B1'],
-}
 
 const TIPOS_TECNICOS = CARD_TYPES.filter((t) => t !== 'vocabulario' && t !== 'gramatica')
 

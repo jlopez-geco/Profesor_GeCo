@@ -99,6 +99,26 @@ describe('buildQueue', () => {
   })
 })
 
+describe('buildQueue con filtro', () => {
+  it('options.filter restringe la cola a un subconjunto (ej. idioma/dominio)', () => {
+    const now = new Date(2026, 5, 10)
+    const ingles = card({ idioma: { lengua: 'en', dominio: 'software', nivel: 'B1', registro: 'neutro', falsos_amigos: [], audio: true }, srs: emptySrs(now) })
+    const frances = card({ idioma: { lengua: 'fr', dominio: 'conversacional', nivel: 'A1', registro: 'neutro', falsos_amigos: [], audio: true }, srs: emptySrs(now) })
+    const tecnica = card({ srs: emptySrs(now) })
+    const queue = buildQueue([ingles, frances, tecnica], [], settings, { filter: (c) => c.idioma?.lengua === 'fr' }, now)
+    expect(queue).toEqual([frances.id])
+  })
+
+  it('options.extraNew permite adelantar nuevas por sobre el cupo diario', () => {
+    const now = new Date(2026, 5, 10)
+    const nuevas = Array.from({ length: 5 }, () => card({ srs: emptySrs(now) }))
+    const sinExtra = buildQueue(nuevas, [], { ...settings, limiteNuevas: 2 }, {}, now)
+    const conExtra = buildQueue(nuevas, [], { ...settings, limiteNuevas: 2 }, { extraNew: 3 }, now)
+    expect(sinExtra.length).toBe(2)
+    expect(conExtra.length).toBe(5)
+  })
+})
+
 describe('newSeenToday', () => {
   it('cuenta solo repasos de tarjetas nuevas del día de hoy', () => {
     const now = new Date(2026, 5, 10, 10)

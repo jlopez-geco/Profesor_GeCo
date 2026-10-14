@@ -34,6 +34,16 @@ export const DOMINIO_LABEL: Record<Dominio, string> = {
 export const NIVELES = ['A1', 'A2', 'B1', 'B2', 'C1'] as const
 export type Nivel = (typeof NIVELES)[number]
 
+/** Francés solo cubre conversacional A1-B1 (A6); inglés cubre los 5 dominios y A1-C1. */
+export const DOMINIOS_POR_LENGUA: Record<Lengua, Dominio[]> = {
+  en: ['conversacional', 'software', 'legal', 'finanzas', 'sostenibilidad'],
+  fr: ['conversacional'],
+}
+export const NIVELES_POR_LENGUA: Record<Lengua, Nivel[]> = {
+  en: ['A1', 'A2', 'B1', 'B2', 'C1'],
+  fr: ['A1', 'A2', 'B1'],
+}
+
 export const REGISTROS = ['formal', 'neutro', 'informal'] as const
 export type Registro = (typeof REGISTROS)[number]
 
