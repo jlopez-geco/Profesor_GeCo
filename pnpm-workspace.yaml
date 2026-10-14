@@ -5,4 +5,5 @@ minimumReleaseAgeExclude:
   - next
 
 allowBuilds:
+  '@tsparticles/engine': true
   esbuild: true

@@ -9,6 +9,7 @@ import { NAV_ITEMS, isActive } from '@/components/nav-items'
 import { Logo } from '@/components/logo'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ensureInitialLibrary } from '@/lib/bootstrap'
+import { registerServiceWorker } from '@/lib/pwa'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -16,6 +17,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     ensureInitialLibrary()
+    registerServiceWorker()
   }, [])
 
   if (focusMode) {

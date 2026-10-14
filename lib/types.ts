@@ -135,10 +135,12 @@ export interface AppSettings {
   limiteNuevas: number
   objetivoMinutos: number
   categorias: string[]
+  efectosVisuales: boolean
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   limiteNuevas: 10,
   objetivoMinutos: 5,
   categorias: [],
+  efectosVisuales: true,
 }

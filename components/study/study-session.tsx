@@ -3,15 +3,19 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { motion } from 'motion/react'
 import { CalendarCheck, Pencil, PartyPopper, X } from 'lucide-react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { EmptyState, LoadingBlock } from '@/components/empty-state'
 import { RatingBar } from '@/components/rating-bar'
 import { StudyCard, vocabMode } from '@/components/study-card'
+import { LazyParticlesBackground } from '@/components/effects/lazy-particles-background'
 import { useCards, useReviews, useSession } from '@/hooks/use-data'
+import { useEffectsEnabled } from '@/hooks/use-effects-enabled'
 import { isSessionPending, recordReview, startSession, endSession } from '@/lib/session'
 import { previewIntervals } from '@/lib/srs'
+import { burstConfetti } from '@/lib/confetti'
 import { dayKey, formatMinutes } from '@/lib/dates'
 import type { Card, Rating } from '@/lib/types'
 
@@ -24,6 +28,7 @@ export function StudySession() {
   const [suggested, setSuggested] = useState<Rating | undefined>()
   const [saving, setSaving] = useState(false)
   const startedAt = useRef(Date.now())
+  const effects = useEffectsEnabled()
 
   const byId = useMemo(() => new Map((cards ?? []).map((c) => [c.id, c])), [cards])
 
@@ -109,6 +114,7 @@ export function StudySession() {
           count={sessionReviews.length}
           ms={sessionReviews.reduce((a, r) => a + r.duracionMs, 0)}
           correct={sessionReviews.filter((r) => r.rating > 1).length}
+          effects={effects}
           onClose={async () => {
             await endSession()
             router.push('/')
@@ -134,9 +140,21 @@ export function StudySession() {
       }
     >
       {session.etiqueta && <p className="mb-4 text-sm text-muted-foreground">Práctica: {session.etiqueta}</p>}
-      <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-8">
-        <StudyCard key={currentKey} card={current.card} revealed={revealed} onReveal={onReveal} mode={mode} />
-      </div>
+      {effects ? (
+        <motion.div
+          key={currentKey}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18 }}
+          className="rounded-2xl border bg-card p-5 shadow-sm md:p-8"
+        >
+          <StudyCard card={current.card} revealed={revealed} onReveal={onReveal} mode={mode} />
+        </motion.div>
+      ) : (
+        <div className="rounded-2xl border bg-card p-5 shadow-sm md:p-8">
+          <StudyCard key={currentKey} card={current.card} revealed={revealed} onReveal={onReveal} mode={mode} />
+        </div>
+      )}
       <div className="mt-6 flex flex-col gap-3">
         {revealed && intervals ? (
           <>
@@ -227,24 +245,50 @@ function NoSession({ onStart }: { onStart: () => Promise<boolean> }) {
   )
 }
 
-function Finished({ count, ms, correct, onClose }: { count: number; ms: number; correct: number; onClose: () => void }) {
+function Finished({
+  count,
+  ms,
+  correct,
+  effects,
+  onClose,
+}: {
+  count: number
+  ms: number
+  correct: number
+  effects: boolean
+  onClose: () => void
+}) {
   const pct = count ? Math.round((correct / count) * 100) : 0
+  const firedRef = useRef(false)
+
+  useEffect(() => {
+    if (effects && count > 0 && !firedRef.current) {
+      firedRef.current = true
+      burstConfetti().catch(() => {
+        // Si un bloqueador de contenido impide cargar canvas-confetti, no pasa nada (A10).
+      })
+    }
+  }, [effects, count])
+
   return (
-    <EmptyState
-      icon={PartyPopper}
-      title="¡Sesión terminada!"
-      description={
-        count > 0
-          ? `Repasaste ${count} ${count === 1 ? 'tarjeta' : 'tarjetas'} en ${formatMinutes(ms)} y recordaste el ${pct}%.`
-          : 'No quedan tarjetas en esta sesión.'
-      }
-    >
-      <Button className="h-11 px-6" onClick={onClose}>
-        Volver a Hoy
-      </Button>
-      <Link href="/progreso" className={buttonVariants({ variant: 'outline', className: 'h-11 px-6' })}>
-        Ver progreso
-      </Link>
-    </EmptyState>
+    <div className="relative">
+      {effects && count > 0 && <LazyParticlesBackground className="pointer-events-none absolute inset-0 -z-10" />}
+      <EmptyState
+        icon={PartyPopper}
+        title="¡Sesión terminada!"
+        description={
+          count > 0
+            ? `Repasaste ${count} ${count === 1 ? 'tarjeta' : 'tarjetas'} en ${formatMinutes(ms)} y recordaste el ${pct}%.`
+            : 'No quedan tarjetas en esta sesión.'
+        }
+      >
+        <Button className="h-11 px-6" onClick={onClose}>
+          Volver a Hoy
+        </Button>
+        <Link href="/progreso" className={buttonVariants({ variant: 'outline', className: 'h-11 px-6' })}>
+          Ver progreso
+        </Link>
+      </EmptyState>
+    </div>
   )
 }
