@@ -17,11 +17,13 @@ import {
   DIFICULTAD_LABEL,
   DOMINIOS,
   DOMINIO_LABEL,
+  ESCALA_LABEL,
   LENGUAS,
   LENGUA_LABEL,
   NIVELES,
   REGISTROS,
   type Card,
+  type Escala,
   type IdiomaInfo,
 } from '@/lib/types'
 
@@ -110,6 +112,12 @@ export function CardForm({
     if (out.idioma) out.idioma = { ...out.idioma, falsos_amigos: falsosText.split(',').map((t) => t.trim()).filter(Boolean) }
     if (out.tipo === 'alternativas') out.opciones = (out.opciones ?? []).map((o) => o.trim()).filter(Boolean)
     for (const k of ['capa', 'explicacion', 'ejemplo'] as const) if (!out[k]?.trim()) delete out[k]
+    if (out.escala) {
+      const escala = { ...out.escala }
+      for (const nivel of Object.keys(escala) as (keyof Escala)[]) if (!escala[nivel]?.trim()) delete escala[nivel]
+      if (Object.keys(escala).length > 0) out.escala = escala
+      else delete out.escala
+    }
     return out
   }
 
@@ -244,6 +252,23 @@ export function CardForm({
         <Field label="Ejemplo (opcional)" htmlFor="ejemplo">
           <Textarea id="ejemplo" value={card.ejemplo ?? ''} onChange={(e) => set('ejemplo', e.target.value)} className="min-h-20 font-mono text-sm" />
         </Field>
+
+        {card.tipo === 'concepto' && (
+          <fieldset className="flex flex-col gap-4 rounded-xl border p-4">
+            <legend className="px-1 text-sm font-medium">Escala (opcional) — otras formas de leer este concepto</legend>
+            <p className="-mt-2 text-xs text-muted-foreground">"Respuesta" arriba es el nivel SWE. Estos son lentes adicionales; al estudiar, se puede elegir cuál ver.</p>
+            {(Object.keys(ESCALA_LABEL) as (keyof Escala)[]).map((nivel) => (
+              <Field key={nivel} label={ESCALA_LABEL[nivel]} htmlFor={`escala-${nivel}`}>
+                <Textarea
+                  id={`escala-${nivel}`}
+                  value={card.escala?.[nivel] ?? ''}
+                  onChange={(e) => setCard((c) => ({ ...c, escala: { ...c.escala, [nivel]: e.target.value } }))}
+                  className="min-h-16 text-sm"
+                />
+              </Field>
+            ))}
+          </fieldset>
+        )}
 
         {!needsIdioma && (
           <label className="flex items-center gap-2 text-sm">

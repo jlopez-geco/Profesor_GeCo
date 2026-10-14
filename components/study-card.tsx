@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Markdown } from '@/components/markdown'
 import { SpeakButton } from '@/components/speak-button'
 import { speak, stripMarkdown } from '@/lib/speech'
-import { CARD_TYPE_LABEL, LENGUA_LABEL, type Card, type Rating } from '@/lib/types'
+import { CARD_TYPE_LABEL, ESCALA_LABEL, LENGUA_LABEL, type Card, type Escala, type Rating } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 export type VocabMode = 'reconocer' | 'escuchar' | 'traducir'
@@ -92,7 +92,14 @@ export function StudyCard({ card, revealed, onReveal, mode = 'reconocer', shortc
         <CodeBody card={card} revealed={revealed} onReveal={onReveal} shortcuts={shortcuts} />
       )}
       {card.tipo === 'vocabulario' && <VocabBody card={card} revealed={revealed} onReveal={onReveal} mode={mode} />}
-      {(card.tipo === 'concepto' || card.tipo === 'gramatica') && (
+      {card.tipo === 'concepto' && (
+        <>
+          <Markdown className="text-lg md:text-xl">{card.pregunta}</Markdown>
+          {!revealed && <RevealButton onClick={() => onReveal()} />}
+          {revealed && <ConceptAnswer card={card} />}
+        </>
+      )}
+      {card.tipo === 'gramatica' && (
         <>
           <Markdown className="text-lg md:text-xl">{card.pregunta}</Markdown>
           {!revealed && <RevealButton onClick={() => onReveal()} />}
@@ -113,9 +120,9 @@ function RevealButton({ onClick, label = 'Mostrar respuesta' }: { onClick: () =>
   )
 }
 
-function Answer({ card, hideMain }: { card: Card; hideMain?: boolean }) {
+function Answer({ card, hideMain, bordered = true }: { card: Card; hideMain?: boolean; bordered?: boolean }) {
   return (
-    <div className="flex flex-col gap-4 border-t pt-5">
+    <div className={cn('flex flex-col gap-4', bordered && 'border-t pt-5')}>
       {!hideMain && <Markdown className="text-base md:text-lg">{card.respuesta}</Markdown>}
       {card.ejemplo && card.tipo !== 'vocabulario' && (
         <div className="flex flex-col gap-1.5">
@@ -138,6 +145,41 @@ function Answer({ card, hideMain }: { card: Card; hideMain?: boolean }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+type Nivel = 'swe' | keyof Escala
+const NIVEL_LABEL: Record<Nivel, string> = { swe: 'SWE', ...ESCALA_LABEL }
+
+/** Tarjetas de concepto: "respuesta" es el nivel SWE; "escala" ofrece lentes extra (niño, adulto, senior, práctica). */
+function ConceptAnswer({ card }: { card: Card }) {
+  const disponibles = (['swe', 'nino', 'adulto', 'senior', 'practica'] as Nivel[]).filter((n) => n === 'swe' || card.escala?.[n]?.trim())
+  const [nivel, setNivel] = useState<Nivel>('swe')
+  const activo = disponibles.includes(nivel) ? nivel : 'swe'
+
+  return (
+    <div className="flex flex-col gap-4 border-t pt-5">
+      {disponibles.length > 1 && (
+        <div role="tablist" aria-label="Nivel de lectura" className="flex flex-wrap gap-1.5">
+          {disponibles.map((n) => (
+            <button
+              key={n}
+              type="button"
+              role="tab"
+              aria-selected={activo === n}
+              onClick={() => setNivel(n)}
+              className={cn(
+                'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                activo === n ? 'border-primary bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted',
+              )}
+            >
+              {NIVEL_LABEL[n]}
+            </button>
+          ))}
+        </div>
+      )}
+      {activo === 'swe' ? <Answer card={card} bordered={false} /> : <Markdown className="text-base md:text-lg">{card.escala![activo]!}</Markdown>}
     </div>
   )
 }
