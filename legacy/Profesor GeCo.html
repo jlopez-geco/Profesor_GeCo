@@ -1,0 +1,2662 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Profesor GeCo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #EEF2EF;
+    --paper-raised: #FFFFFF;
+    --ink: #15211B;
+    --ink-soft: #46564D;
+    --line: #CBD6CF;
+    --key: #AD7126;
+    --key-soft: #EFDBB8;
+    --allow: #2F6B4C;
+    --allow-soft: #DCEDE2;
+    --deny: #96433A;
+    --deny-soft: #F2DEDA;
+    --code-bg: #101914;
+    --code-text: #D9E6DC;
+    --code-line: #26352C;
+    --shadow: 0 1px 2px rgba(10,20,15,0.07), 0 10px 28px rgba(10,20,15,0.10);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1512;
+      --paper-raised: #16201B;
+      --ink: #E8EEEA;
+      --ink-soft: #A9B8AF;
+      --line: #2A3630;
+      --key: #E3A851;
+      --key-soft: #3A2F1C;
+      --allow: #6FBE94;
+      --allow-soft: #1C3328;
+      --deny: #D98A7C;
+      --deny-soft: #3A211D;
+      --code-bg: #0A100D;
+      --code-text: #D9E6DC;
+      --code-line: #223029;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1512;
+    --paper-raised: #16201B;
+    --ink: #E8EEEA;
+    --ink-soft: #A9B8AF;
+    --line: #2A3630;
+    --key: #E3A851;
+    --key-soft: #3A2F1C;
+    --allow: #6FBE94;
+    --allow-soft: #1C3328;
+    --deny: #D98A7C;
+    --deny-soft: #3A211D;
+    --code-bg: #0A100D;
+    --code-text: #D9E6DC;
+    --code-line: #223029;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 28px rgba(0,0,0,0.45);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    display: flex;
+    justify-content: center;
+    padding-inline: 20px;
+    padding-block: 40px;
+  }
+  .page {
+    width: 100%;
+    max-width: 740px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+
+  header { display: flex; flex-direction: column; gap: 10px; }
+  .head-row { display: flex; align-items: center; gap: 12px; }
+  .glyph { flex: none; width: 30px; height: 30px; color: var(--key); }
+  h1 {
+    margin: 0;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: clamp(26px, 5vw, 36px);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+  .subtitle {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 16px;
+    max-width: 58ch;
+    line-height: 1.55;
+  }
+  .progress-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .progress-row strong { color: var(--ink); font-weight: 700; }
+  .dot-track {
+    display: flex;
+    gap: 6px;
+  }
+  .dot-track span {
+    width: 7px; height: 7px; border-radius: 999px;
+    background: var(--line);
+  }
+  .dot-track span.known { background: var(--allow); }
+  .dot-track span.review { background: var(--deny); }
+  .dot-track span.current { outline: 2px solid var(--key); outline-offset: 2px; }
+
+  .stage-wrap { display: flex; flex-direction: column; gap: 16px; }
+  .stage {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: clamp(24px, 5vw, 44px);
+    min-height: 360px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 18px;
+    transition: transform 160ms ease, opacity 160ms ease;
+  }
+  .stage.turning { transform: rotateX(8deg) scale(0.98); opacity: 0.35; }
+  @media (prefers-reduced-motion: reduce) {
+    .stage { transition: none; }
+  }
+
+  .eyebrow {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--key);
+    font-weight: 500;
+  }
+  .term {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: clamp(22px, 4.2vw, 32px);
+    text-wrap: balance;
+    line-height: 1.15;
+  }
+  .front-bullets {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 60ch;
+  }
+  .front-bullets li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 16.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .front-bullets li::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    top: 0.62em;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--key);
+  }
+  .front-bullets li strong {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .levels { display: flex; gap: 6px; flex-wrap: wrap; }
+  .level-tab {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    color: var(--ink-soft);
+  }
+  .level-tab.active { background: var(--key); border-color: var(--key); color: var(--paper-raised); font-weight: 700; }
+  .level-tab.seen { border-color: var(--allow); }
+  .level-title {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    color: var(--key);
+    font-weight: 500;
+  }
+  .level-body { display: flex; flex-direction: column; gap: 16px; }
+  ul.plain {
+    margin: 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    max-width: 65ch;
+  }
+  ul.plain li::marker { color: var(--key); }
+  ul.plain code, .why code, .example-note code, .front-bullets code, ol code {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 0.88em;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 0 5px;
+  }
+  .practice {
+    background: var(--allow-soft);
+    border: 1px solid var(--allow);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .practice .back-label { color: var(--allow); }
+  .practice ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.55; }
+  .level-next { align-self: flex-start; }
+  .pill.info { background: var(--paper); color: var(--ink-soft); border: 1px solid var(--line); }
+  .pill.bad { background: var(--deny-soft); color: var(--deny); }
+  .tags { display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--deny);
+    color: var(--deny);
+  }
+  .requires {
+    font-size: 14px;
+    color: var(--ink-soft);
+    border-top: 1px dashed var(--line);
+    padding-top: 12px;
+    max-width: 62ch;
+  }
+  .requires strong {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-right: 6px;
+  }
+  .index-view { display: flex; flex-direction: column; gap: 18px; }
+  .index-intro { margin: 0; color: var(--ink-soft); font-size: 15.5px; line-height: 1.6; max-width: 62ch; }
+  .cat-grid { display: grid; gap: 14px; }
+  .cat {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cat.empty { opacity: 0.6; box-shadow: none; }
+  .cat-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .cat-name { margin: 0; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 18px; font-weight: 700; }
+  .cat-count {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .cat-line { margin: 0; font-size: 15px; line-height: 1.55; max-width: 66ch; }
+  .cat-line strong {
+    display: inline-block;
+    min-width: 96px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--key);
+  }
+  .cat-topics { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip-static {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+  }
+  .cat-enter { align-self: flex-start; margin-top: 4px; }
+  .deck-top { margin-bottom: 14px; }
+  .front-hint {
+    margin-top: 6px;
+    color: var(--ink-soft);
+    font-size: 15px;
+  }
+
+  .back-block { display: flex; flex-direction: column; gap: 8px; }
+  .back-label {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .analogy { font-size: 17px; line-height: 1.65; max-width: 65ch; }
+  .analogy em { font-style: italic; color: var(--ink); }
+
+  .example {
+    border-left: 3px solid var(--key);
+    padding-left: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .example-title {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+  pre.code {
+    margin: 0;
+    background: var(--code-bg);
+    color: var(--code-text);
+    border: 1px solid var(--code-line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .example-note { font-size: 15px; line-height: 1.6; color: var(--ink-soft); }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 9px;
+    border-radius: 999px;
+    width: fit-content;
+  }
+  .pill.allow { background: var(--allow-soft); color: var(--allow); }
+  .pill.deny { background: var(--deny-soft); color: var(--deny); }
+
+  .why { font-size: 15.5px; line-height: 1.6; color: var(--ink-soft); max-width: 65ch; }
+  .why strong { color: var(--ink); font-weight: 600; }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 10px 16px;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease;
+  }
+  button:hover { border-color: var(--key); }
+  button:focus-visible { outline: 2px solid var(--key); outline-offset: 2px; }
+  button.primary { background: var(--key); border-color: var(--key); color: var(--paper-raised); font-weight: 700; }
+  button.primary:hover { opacity: 0.92; }
+  button.ghost-allow { border-color: var(--allow); color: var(--allow); }
+  button.ghost-allow:hover { background: var(--allow-soft); }
+  button.ghost-deny { border-color: var(--deny); color: var(--deny); }
+  button.ghost-deny:hover { background: var(--deny-soft); }
+  button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  .keys-hint {
+    text-align: center;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    letter-spacing: 0.03em;
+  }
+
+  .deck {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    padding: 7px 11px;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+    color: var(--ink-soft);
+    cursor: pointer;
+    max-width: 220px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .chip.known { border-color: var(--allow); color: var(--allow); }
+  .chip.review { border-color: var(--deny); color: var(--deny); }
+  .chip.active { background: var(--key); border-color: var(--key); color: var(--paper-raised); }
+
+  footer {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+    border-top: 1px solid var(--line);
+    padding-top: 18px;
+  }
+  footer strong { color: var(--ink); }
+
+  .tag-col { border-color: var(--key); color: var(--key); }
+  .layer-badge { color: var(--key); font-weight: 700; }
+  .cat.cat-col { border-color: var(--key); }
+  .panel { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 0 0 16px; }
+  .panel.done { border-color: var(--allow); }
+  .panel-title { margin: 6px 0 4px; font-size: 20px; line-height: 1.25; }
+  .panel-sub { margin: 4px 0 12px; color: var(--ink-soft); font-size: 14.5px; line-height: 1.55; }
+  .pq { background: var(--paper-raised); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin: 0 0 16px; }
+  .pq-head { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; margin-bottom: 8px; }
+  .pq-n { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--key); font-weight: 700; }
+  .pq-topic { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: var(--ink-soft); }
+  .pq-q { margin: 0 0 12px; font-size: 16.5px; line-height: 1.55; }
+  .opts { display: flex; flex-direction: column; gap: 8px; }
+  .opt { text-align: left; line-height: 1.45; }
+  .opt.right { border-color: var(--allow); background: var(--allow-soft); color: var(--ink); }
+  .opt.wrong { border-color: var(--deny); background: var(--deny-soft); color: var(--ink); }
+  .opt:disabled { opacity: 1; cursor: default; }
+  .pq-why, .pq-hint, .pq-done { margin: 12px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-soft); }
+  .pq-why strong, .pq-hint strong { color: var(--ink); }
+  .pq-src { margin-top: 8px; font-size: 12.5px; }
+  .pq-src a { color: var(--key); }
+  .pq-area { width: 100%; box-sizing: border-box; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 13px; line-height: 1.5; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); color: var(--ink); resize: vertical; }
+  .pq-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+  .pq-sol { margin-top: 14px; }
+  .rec-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+  .rec { border-top: 1px solid var(--line); padding-top: 12px; }
+  .rec-term { font-weight: 700; font-size: 15.5px; }
+  .rec-layer { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 11px; color: var(--key); margin-left: 10px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .rec-why { margin: 4px 0; font-size: 14px; line-height: 1.55; color: var(--ink-soft); }
+  .rec-conn { margin: 2px 0 8px; font-size: 12.5px; color: var(--ink-soft); }
+  .rec-more { margin-top: 12px; }
+  .rec-more summary { cursor: pointer; color: var(--key); font-size: 14px; margin-bottom: 12px; }
+</style>
+
+<div class="page">
+  <header>
+    <div class="head-row">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="8.5" r="5.5" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M12 13.5V20M9 17H15M9.5 20H14.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <h1>Profesor GeCo</h1>
+    </div>
+    <p class="subtitle">Conceptos técnicos explicados en criollo, con ejemplos reales sacados de tus propios proyectos — no de un manual genérico.</p>
+    <div class="progress-row">
+      <span id="progressText">1 / 2</span>
+      <span class="dot-track" id="dotTrack"></span>
+      <span id="masteredText"><strong>0</strong> dominados</span>
+    </div>
+  </header>
+
+  <div id="indexView" class="index-view"></div>
+
+  <div id="practiceView" hidden></div>
+
+  <div id="deckView" hidden>
+    <div class="deck-top"><button id="backBtn" type="button">&larr; Índice</button></div>
+    <div class="stage-wrap">
+      <div class="stage" id="stage"></div>
+
+      <div class="controls" id="navControls">
+        <button id="prevBtn" type="button">&larr; Anterior</button>
+        <button id="flipBtn" type="button" class="primary">Dar vuelta</button>
+        <button id="nextBtn" type="button">Siguiente &rarr;</button>
+      </div>
+      <div class="controls" id="reviewControls" hidden>
+        <button id="practiceBtn" type="button">Practicar este concepto</button>
+        <button id="reviewLaterBtn" type="button" class="ghost-deny">Repasar después</button>
+        <button id="knowItBtn" type="button" class="ghost-allow">Lo tengo claro</button>
+      </div>
+      <p class="keys-hint">&larr; &rarr; para moverte &nbsp;·&nbsp; espacio para dar vuelta</p>
+    </div>
+
+    <div class="deck" id="deckChips" style="margin-top:20px"></div>
+  </div>
+
+  <footer>
+    <strong>Este mazo va a ir creciendo.</strong> Cada concepto nuevo se agrega con su categoría, su orden dentro de ella y los conceptos que conviene ver antes. Pídele a Claude que agregue una tarjeta a este mismo artefacto, con un ejemplo real de lo que estén viendo en ese momento.
+  </footer>
+</div>
+
+<script>
+(function () {
+  const CARDS = [
+    {
+      id: "rls",
+      category: "database", order: 1, requires: [], tags: ["seguridad"], collections: ["col:supabase"],
+      bullets: [
+        "<strong>Qué es</strong> Reglas que Postgres aplica fila por fila en cada consulta.",
+        "<strong>Sirve para</strong> Que cada usuario vea o modifique solo las filas que le corresponden.",
+        "<strong>Dónde corre</strong> En la base de datos, no en el frontend."
+      ],
+      topic: "Seguridad en Postgres",
+      term: "RLS — Row Level Security",
+      kid: "Imagina una caja con los cuadernos de muchos niños. <em>RLS</em> es un guardia que, cada vez que alguien pide un cuaderno, mira quién es y solo le entrega los suyos. Los demás cuadernos ni siquiera los ve.",
+      analogy: "Piensa en una tabla como un archivador con las carpetas de <em>todas</em> las OPS en el mismo cajón. Sin RLS, cualquiera con acceso al cajón puede sacar cualquier carpeta. RLS es ponerle una regla a cada carpeta por separado: “esta la puede sacar solo tal tipo de persona”. Postgres revisa esa regla en cada SELECT/INSERT/UPDATE/DELETE automáticamente — la aplicación (React, el formulario) ni se entera, nunca tiene que acordarse de filtrar por su cuenta.",
+      examples: [
+        {
+          label: "Ejemplo real · tabla safety_observations (proyecto oxiwork)",
+          verdict: "allow",
+          code: "CREATE POLICY \"approved users read all\"\nON safety_observations FOR SELECT\nUSING (\n  EXISTS (\n    SELECT 1 FROM user_roles\n    WHERE user_roles.user_id = auth.uid()\n      AND user_roles.role = ANY (\n        ARRAY['usuario','admin','super_admin']::app_role[]\n      )\n  )\n);",
+          note: "Si tu auth.uid() no aparece en user_roles con uno de esos 3 roles, esa fila de safety_observations ni siquiera existe para tu consulta. No es un permiso que se revisa después del SELECT — es parte del SELECT mismo."
+        },
+        {
+          label: "Bonus · RLS también manda en los INSERT",
+          verdict: "allow",
+          code: "CREATE POLICY \"guest insert\"\nON safety_observations FOR INSERT\nWITH CHECK (\n  auth.uid() IS NULL AND user_id IS NULL\n);",
+          note: "Esta es la regla que permite reportar una OPS sin iniciar sesión — pero solo si el reporte no intenta hacerse pasar por ningún usuario (user_id debe venir vacío)."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "Una tabla con RLS activado y <strong>sin políticas</strong> no devuelve nada (salvo a roles que se saltan RLS, como <code>service_role</code> o el dueño). Una tabla <strong>sin RLS activado</strong> queda abierta a cualquiera con permiso sobre ella.",
+          "<code>USING</code> filtra las filas que ya existen; <code>WITH CHECK</code> valida las filas que se insertan o modifican. Olvidar el segundo es un hueco clásico en UPDATE e INSERT.",
+          "Varias políticas permisivas sobre la misma tabla se combinan con <strong>OR</strong>: basta que una deje pasar. Agregar una política \"inocente\" puede abrir más de lo que querías.",
+          "Una política que consulta otra tabla con RLS puede volverse lenta o recursiva. Ahí entra SECURITY DEFINER (siguiente tarjeta)."
+        ],
+        practice: [
+          "En un proyecto de prueba, crea una tabla y actívale RLS con <code>ALTER TABLE ... ENABLE ROW LEVEL SECURITY</code>. Consúltala como usuario autenticado: debe venir vacía.",
+          "Agrega una política de SELECT y repite la consulta con dos usuarios distintos. Verifica que cada uno ve solo lo suyo.",
+          "Intenta un UPDATE que cambie el <code>user_id</code> a otro usuario. Mira cómo se comporta con y sin <code>WITH CHECK</code>.",
+          "Corre los advisors de Supabase y mira qué tablas de <code>public</code> te marca sin RLS."
+        ]
+      },
+      why: "Es la barrera <strong>real</strong>, nunca el frontend. Un bug en React puede ocultar un botón mal — pero no puede hacer que Postgres devuelva una fila que RLS decidió que no existe para ese usuario."
+    },
+    {
+      id: "security-definer",
+      category: "database", order: 2, requires: ["rls"], tags: ["seguridad"], collections: ["col:supabase"],
+      bullets: [
+        "<strong>Qué es</strong> Función que corre con los permisos de su dueño (el rol que la creó, normalmente <code>postgres</code>), no con los de quien la llama.",
+        "<strong>Sirve para</strong> Consultar tablas que el usuario no puede leer directo (ej. user_roles) desde una política RLS.",
+        "<strong>Ojo</strong> Siempre con SET search_path fijo."
+      ],
+      topic: "Funciones en Postgres",
+      term: "SECURITY DEFINER",
+      kid: "Imagina que tú no puedes entrar a la bodega, pero hay un ayudante que tiene la llave. Le preguntas \"¿soy admin?\", él entra con <em>su</em> llave, mira y te responde solo \"sí\" o \"no\". Tú nunca tocas la llave ni entras a la bodega.",
+      analogy: "Una función SQL normal corre con los permisos de quien la llama — como un empleado que solo abre los cajones para los que tiene su propia llave. <em>SECURITY DEFINER</em> hace que la función corra con los permisos de su <em>dueño</em> (el rol que la creó, normalmente <em>postgres</em>) — le prestan el llavero del dueño, pero solo mientras dura esa tarea puntual, y solo para lo que esa tarea hace.",
+      examples: [
+        {
+          label: "Ejemplo real · función is_admin_or_super() (proyecto oxiwork)",
+          verdict: "allow",
+          code: "CREATE FUNCTION is_admin_or_super(_user_id uuid)\nRETURNS boolean\nLANGUAGE sql STABLE\nSECURITY DEFINER\nSET search_path = public\nAS $$\n  SELECT EXISTS (\n    SELECT 1 FROM user_roles\n    WHERE user_id = _user_id\n      AND role IN ('admin','super_admin')\n  )\n$$;",
+          note: "Esta función consulta user_roles por dentro — algo que un usuario común no podría hacer directo (RLS se lo bloquearía). SECURITY DEFINER le presta, solo para esta tarea, los permisos de quien la creó."
+        },
+        {
+          label: "Dónde se usa — conecta con la tarjeta de RLS",
+          verdict: "deny",
+          code: "CREATE POLICY \"admins update safety_observations\"\nON safety_observations FOR UPDATE\nUSING (is_admin_or_super(auth.uid()))\nWITH CHECK (is_admin_or_super(auth.uid()));",
+          note: "La política de RLS no repite la consulta a mano: confía en esta función para decidir el permiso. Así es como RLS y SECURITY DEFINER trabajan juntos todo el tiempo."
+        },
+        {
+          label: "Cómo ver quién es el dueño de una función",
+          verdict: "info",
+          code: "SELECT proname,\n       proowner::regrole AS dueno,\n       prosecdef AS es_security_definer\nFROM pg_proc\nWHERE proname = 'is_admin_or_super';",
+          note: "\"Quien la creó\" es un rol de Postgres guardado en la función, no una persona, un computador ni una sesión. En Supabase, las migraciones suelen correr como <code>postgres</code>, así que ese suele ser el dueño."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "En Supabase, las funciones del schema <code>public</code> se exponen como RPC en la API. Por defecto Postgres da EXECUTE a <code>PUBLIC</code>: una función SECURITY DEFINER puede quedar llamable por <code>anon</code> con los permisos de su dueño. Revoca con <code>REVOKE EXECUTE ... FROM PUBLIC, anon</code> y concede solo a quien corresponda.",
+          "Mantén la función mínima: una sola tarea, idealmente de solo lectura. Nunca armes SQL dinámico con parámetros sin sanitizar, porque lo ejecutaría con permisos del dueño.",
+          "Fija siempre <code>SET search_path</code>, y usa nombres calificados (<code>public.user_roles</code>) si quieres blindarte más.",
+          "Revisa el dueño de cada función SECURITY DEFINER: cuanto más amplios sus permisos, más daño puede hacer un error."
+        ],
+        practice: [
+          "Crea una función <code>es_admin(uuid)</code> sin SECURITY DEFINER y llámala como usuario normal: RLS le bloquea la lectura de <code>user_roles</code>.",
+          "Recréala con SECURITY DEFINER y <code>SET search_path = public</code>. Compara el resultado.",
+          "Haz <code>REVOKE EXECUTE</code> para <code>anon</code> y confirma que una llamada sin login falla.",
+          "Corre la consulta de <code>pg_proc</code> para listar todas tus funciones SECURITY DEFINER y revisa el dueño de cada una."
+        ]
+      },
+      why: "<strong>SET search_path = public</strong> no es decorativo: sin fijarlo, alguien podría colar una tabla o función falsa en otro schema con el mismo nombre, y la función terminaría usando el llavero prestado para lo que no debía. Por eso el Mandamiento GeCo #2 exige fijar siempre el search_path en estas funciones."
+    },
+    {
+      id: "aws",
+      category: "cloud", order: 1, requires: [], tags: [],
+      bullets: [
+        "<strong>Qué es</strong> La plataforma de Amazon donde alquilas servidores, bases de datos, almacenamiento e IA en vez de comprarlos.",
+        "<strong>Sirve para</strong> Tener infraestructura en minutos y pagar solo por lo que usas.",
+        "<strong>Ojo</strong> Todo lo que dejas encendido cuesta, aunque no lo uses."
+      ],
+      topic: "Fundamentos de Cloud",
+      term: "AWS — Amazon Web Services",
+      kid: "Imagina que en vez de comprar una cocina gigante para hacer una fiesta, alquilas una por unas horas. Amazon tiene una ciudad enorme llena de cocinas, bodegas y máquinas, y tú alquilas solo lo que necesitas, solo el rato que lo usas.",
+      analogy: "AWS es como una compañía eléctrica, pero de computación: no construyes tu propia planta, te conectas y pagas por lo que consumes. Amazon opera centros de datos en todo el mundo, agrupados en <em>regiones</em> (por ejemplo São Paulo o N. Virginia), y cada región tiene varias <em>zonas de disponibilidad</em>: edificios separados, para que una falla en uno no tumbe todo. Encima de eso ofrece cientos de servicios: máquinas (EC2), almacenamiento (S3), bases de datos (RDS), IA (Bedrock) y muchos más.",
+      examples: [
+        {
+          label: "Anatomía de un ARN, el “apellido” único de cualquier recurso",
+          verdict: "info",
+          code: String.raw`arn:aws:ec2:sa-east-1:123456789012:instance/i-0abc123
+ │   │   │      │          │            └─ el recurso concreto
+ │   │   │      │          └─ ID de tu cuenta AWS
+ │   │   │      └─ región (sa-east-1 = São Paulo)
+ │   │   └─ servicio (ec2, s3, iam, bedrock...)
+ │   └─ partición
+ └─ ARN = Amazon Resource Name`,
+          note: "Vas a ver ARNs por todas partes, sobre todo en políticas de IAM, que es como se dice “sobre qué recurso”. Es un ejemplo genérico, no de tus proyectos."
+        },
+        {
+          label: "Todo lo de la consola web también se puede hacer por terminal",
+          verdict: "info",
+          code: String.raw`aws ec2 describe-instances \
+  --region sa-east-1 \
+  --query 'Reservations[].Instances[].[InstanceId,State.Name]' \
+  --output table`,
+          note: "Lista tus máquinas y su estado. Que todo sea una API es lo que permite automatizar y repetir la infraestructura sin hacer clics."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>La región importa:</strong> no todos los servicios ni modelos existen en todas las regiones, los precios cambian por región y tus datos viven donde los pongas. Elegirla es una decisión de latencia, costo y cumplimiento.",
+          "<strong>El costo sorprende:</strong> recursos olvidados (máquinas encendidas, volúmenes, IPs elásticas, NAT gateways) siguen cobrando. Pon una alerta de presupuesto (AWS Budgets) desde el primer día.",
+          "<strong>Nunca uses la cuenta root</strong> para el trabajo diario: actívale MFA, guárdala y trabaja con usuarios o roles de IAM (siguiente tarjeta).",
+          "La capa gratuita tiene límites y condiciones que han ido cambiando. Verifica las vigentes antes de confiar en ellas."
+        ],
+        practice: [
+          "Abre la consola de AWS y mira en qué región estás (arriba a la derecha). Cambia de región y observa cómo tus recursos “desaparecen”: están en la otra.",
+          "Crea un presupuesto mensual bajo en AWS Budgets, con alerta por correo.",
+          "Instala la AWS CLI y corre <code>aws sts get-caller-identity</code> para ver con qué identidad estás trabajando.",
+          "Abre Cost Explorer y busca qué servicio te cuesta más, aunque sea poco."
+        ]
+      },
+      why: "Casi todo lo demás de esta categoría (IAM, EC2, Bedrock) son <strong>servicios de AWS</strong>. Dos ideas lo gobiernan todo: pagas por uso, y la seguridad se reparte. AWS cuida el edificio y el hardware; <strong>tú</strong> cuidas lo que pones adentro y quién entra (modelo de responsabilidad compartida)."
+    },
+    {
+      id: "iam",
+      category: "cloud", order: 2, requires: ["aws"], tags: ["seguridad"],
+      bullets: [
+        "<strong>Qué es</strong> El sistema de AWS que define quién es cada persona o servicio y qué puede hacer.",
+        "<strong>Sirve para</strong> Dar a cada uno solo los permisos que necesita, ni uno más.",
+        "<strong>Dónde corre</strong> En toda la cuenta: se evalúa en cada llamada a cualquier servicio."
+      ],
+      topic: "Identidad y permisos",
+      term: "IAM — Identity and Access Management",
+      kid: "Imagina un edificio con muchas puertas. IAM es el portero con una lista: sabe quién eres, qué puertas puedes abrir y cuáles no. Si tu nombre no aparece en la lista de esa puerta, no pasas, aunque llegues hasta ella.",
+      analogy: "Es un primo del RLS, pero para toda la nube: en vez de decidir qué <em>filas</em> ve alguien, decide qué <em>acciones</em> puede hacer sobre qué <em>recursos</em>. Tiene tres piezas: <em>identidades</em> (usuarios, grupos y roles), <em>políticas</em> (documentos que dicen permitido o denegado) y <em>recursos</em> (el bucket, la máquina, el modelo). Por defecto todo está denegado: hay que permitir de forma explícita.",
+      examples: [
+        {
+          label: "Política mínima: leer objetos de un bucket de S3",
+          verdict: "allow",
+          code: String.raw`{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::mi-bucket/*"
+    }
+  ]
+}`,
+          note: "Se lee así: <strong>permite</strong> (<code>Effect</code>) la acción <code>s3:GetObject</code> solo sobre los objetos de <code>mi-bucket</code>. Qué, sobre qué y permitir o no: el mismo trío en cualquier política. Ejemplo genérico, no de tus proyectos."
+        },
+        {
+          label: "Un Deny explícito gana siempre",
+          verdict: "deny",
+          code: String.raw`{
+  "Effect": "Deny",
+  "Action": "s3:DeleteObject",
+  "Resource": "arn:aws:s3:::mi-bucket/*"
+}`,
+          note: "Un <code>Deny</code> explícito le gana a cualquier <code>Allow</code>, venga de donde venga. Orden de evaluación: Deny explícito, luego Allow explícito, y si no hay nada, denegado por defecto."
+        },
+        {
+          label: "Rol para una máquina EC2: sin llaves en el código",
+          verdict: "info",
+          code: String.raw`{
+  "Effect": "Allow",
+  "Principal": { "Service": "ec2.amazonaws.com" },
+  "Action": "sts:AssumeRole"
+}`,
+          note: "Esta es la <em>política de confianza</em> del rol: dice quién puede asumirlo (aquí, el servicio EC2). La máquina recibe credenciales temporales automáticas, así no guardas access keys en el código ni en un <code>.env</code>."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Mínimo privilegio de verdad:</strong> evita <code>Action: *</code> y <code>Resource: *</code>. Empieza estrecho y amplía cuando algo falle, no al revés.",
+          "Prefiere <strong>roles</strong> con credenciales temporales a usuarios con access keys de larga vida. Una key filtrada en un repositorio es una de las causas más frecuentes de incidentes en AWS.",
+          "Hay varias capas que se combinan: políticas de identidad, de recurso, límites de permisos y SCPs de la organización. Un permiso solo funciona si ninguna capa lo bloquea.",
+          "Cuando ves <code>AccessDenied</code>, lee el mensaje completo: nombra la acción y el recurso que falló. Para depurar usa el IAM Policy Simulator y Access Analyzer."
+        ],
+        practice: [
+          "Crea un usuario de prueba sin permisos y verifica que <code>aws s3 ls</code> falla con AccessDenied.",
+          "Escribe una política que solo permita <code>s3:GetObject</code> sobre un bucket y adjúntala. Comprueba que leer funciona y borrar no.",
+          "Agrega un <code>Deny</code> explícito y comprueba que gana sobre el Allow.",
+          "Corre IAM Access Analyzer y revisa si algo quedó expuesto públicamente."
+        ]
+      },
+      why: "Cada error de IAM es <strong>demasiado permiso</strong> (riesgo de seguridad) o <strong>muy poco</strong> (la app falla con AccessDenied). Saber leer una política es la habilidad de seguridad más rentable en AWS, y es la base para usar bien EC2 y Bedrock."
+    },
+    {
+      id: "ec2",
+      category: "cloud", order: 3, requires: ["aws", "iam"], tags: [],
+      bullets: [
+        "<strong>Qué es</strong> Servidores virtuales que alquilas en AWS por el tiempo que los uses.",
+        "<strong>Sirve para</strong> Correr tu app, un backend o un proceso pesado en una máquina que controlas por completo.",
+        "<strong>Ojo</strong> Mientras esté encendida cobra, la uses o no."
+      ],
+      topic: "Cómputo",
+      term: "EC2 — Elastic Compute Cloud",
+      kid: "Imagina que alquilas un computador por internet. Eliges qué tan fuerte lo quieres y lo prendes. Mientras está prendido, pagas; cuando lo apagas dejas de pagar el “cerebro”, aunque el “cajón” donde guarda tus cosas sigue costando un poquito.",
+      analogy: "EC2 es arrendar un computador dentro de un centro de datos de Amazon. Tú eliges el tamaño (<em>tipo de instancia</em>: cuánta CPU y memoria), el punto de partida del sistema (<em>AMI</em>), el disco (<em>EBS</em>) y quién puede acercarse (<em>security group</em>, el cortafuegos de esa máquina). Después entras por SSH y haces lo que harías en cualquier servidor Linux. A diferencia de los servicios gestionados, aquí <em>tú</em> eres responsable de actualizar, instalar y vigilar.",
+      examples: [
+        {
+          label: "Lanzar una máquina desde la terminal",
+          verdict: "info",
+          code: String.raw`aws ec2 run-instances \
+  --image-id ami-0123456789abcdef0 \
+  --instance-type t3.micro \
+  --key-name mi-llave \
+  --security-group-ids sg-0123456789abcdef0 \
+  --iam-instance-profile Name=mi-rol-ec2`,
+          note: "Los IDs son de relleno. Cuatro decisiones: qué sistema (AMI), qué tamaño (<code>t3.micro</code>), cómo entrar (llave) y quién puede acercarse (security group). Con <code>--iam-instance-profile</code> la máquina asume un rol de IAM, que conecta con la tarjeta anterior."
+        },
+        {
+          label: "SSH solo desde tu IP",
+          verdict: "allow",
+          code: String.raw`aws ec2 authorize-security-group-ingress \
+  --group-id sg-0123456789abcdef0 \
+  --protocol tcp --port 22 \
+  --cidr 203.0.113.25/32`,
+          note: "<code>/32</code> significa una sola dirección IP. Esta regla permite SSH únicamente desde esa IP (aquí, una de documentación)."
+        },
+        {
+          label: "La regla que no debes dejar",
+          verdict: "bad",
+          code: String.raw`aws ec2 authorize-security-group-ingress \
+  --group-id sg-0123456789abcdef0 \
+  --protocol tcp --port 22 \
+  --cidr 0.0.0.0/0`,
+          note: "<code>0.0.0.0/0</code> en el puerto 22 abre SSH a todo internet. Los bots escanean eso de forma permanente."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Detener no es terminar.</strong> Una máquina detenida no cobra cómputo, pero su disco EBS y las IPs elásticas sí. Terminarla la elimina (y por defecto borra el disco raíz). Los volúmenes huérfanos son un costo clásico.",
+          "La IP pública cambia al detener e iniciar, salvo que uses una IP elástica. No amarres un DNS a una IP efímera.",
+          "Dimensiona midiendo, no por intuición: mira CPU y memoria en CloudWatch. Las familias <code>t</code> funcionan con créditos de CPU: si la carga alta es sostenida, se estrangulan.",
+          "Prefiere un rol de IAM y <strong>SSM Session Manager</strong> en vez de abrir el puerto 22, y mantén el sistema operativo parchado."
+        ],
+        practice: [
+          "En una cuenta de prueba, lanza la instancia más barata disponible con un security group que permita SSH solo desde tu IP.",
+          "Conéctate por SSH, instala <code>htop</code> y obsérvalo.",
+          "Detén la máquina y compara la IP pública antes y después. Luego revisa en Cost Explorer qué sigue cobrando (el volumen).",
+          "Termina la instancia y confirma que no quedó ningún volumen ni IP elástica huérfana."
+        ]
+      },
+      why: "Es el bloque básico de cómputo en la nube: casi todo lo que corre en un servidor puede correr aquí. A cambio de máxima libertad, <strong>tú</strong> operas la máquina. Por eso es la base para entender después las opciones más gestionadas, como contenedores o serverless."
+    },
+    {
+      id: "bedrock",
+      category: "cloud", order: 7, requires: ["aws", "iam"], tags: [],
+      bullets: [
+        "<strong>Qué es</strong> Un servicio de AWS que da acceso por API a modelos de IA de varios proveedores, sin administrar servidores.",
+        "<strong>Sirve para</strong> Usar modelos como Claude dentro de tu cuenta AWS, con su IAM, su facturación y su red.",
+        "<strong>Ojo</strong> Pagas por tokens (entrada y salida) y los modelos disponibles varían según la región."
+      ],
+      topic: "IA gestionada",
+      term: "Amazon Bedrock",
+      kid: "Imagina una biblioteca de cerebros de computador de distintas marcas. En vez de construir uno tú, llamas por teléfono al que elijas, le haces una pregunta y te responde. Bedrock es esa biblioteca, con una sola puerta de entrada, y pagas según cuánto hablas.",
+      analogy: "Bedrock es un menú de modelos de IA (por ejemplo Claude de Anthropic, Nova de Amazon, Llama o Mistral) al que accedes con una API de AWS. No levantas máquinas con GPU ni descargas modelos: haces una llamada, el modelo responde y te cobran por <em>tokens</em>, que son trozos de texto, tanto los que envías como los que recibes. Como es parte de AWS, el acceso se controla con <em>IAM</em> y la factura llega en la misma cuenta que el resto.",
+      examples: [
+        {
+          label: "Llamar a un modelo con Python (API Converse)",
+          verdict: "info",
+          code: String.raw`import boto3
+
+client = boto3.client("bedrock-runtime", region_name="us-east-1")
+
+resp = client.converse(
+    modelId="<ID_DEL_MODELO_O_PERFIL>",  # cópialo desde la consola
+    messages=[{
+        "role": "user",
+        "content": [{"text": "Explícame RLS en una frase"}],
+    }],
+    inferenceConfig={"maxTokens": 300},
+)
+
+print(resp["output"]["message"]["content"][0]["text"])`,
+          note: "No puse un ID de modelo real a propósito: cópialo desde la consola de Bedrock en tu región, porque algunos modelos se llaman mediante <em>perfiles de inferencia</em>. <code>Converse</code> usa el mismo formato para distintos proveedores. boto3 toma las credenciales de tu rol o perfil de AWS: nunca las escribas en el código."
+        },
+        {
+          label: "Permiso IAM mínimo para invocar modelos",
+          verdict: "allow",
+          code: String.raw`{
+  "Effect": "Allow",
+  "Action": [
+    "bedrock:InvokeModel",
+    "bedrock:InvokeModelWithResponseStream"
+  ],
+  "Resource": "*"
+}`,
+          note: "Es el permiso que le das a tu app o rol. Aquí <code>Resource: *</code> es solo para ilustrar; en producción acótalo a los modelos o perfiles que realmente usas (mínimo privilegio, como en la tarjeta de IAM)."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Costo = tokens de entrada + tokens de salida</strong>, con precio distinto por modelo. Prompts largos y conversaciones que reenvían todo el historial multiplican el gasto: mide los tokens por llamada.",
+          "<strong>Disponibilidad por región y modelo:</strong> no todos están en todas partes. Los perfiles de inferencia entre regiones suben la capacidad, pero la solicitud puede procesarse en otra región; revisa si tus requisitos de datos lo permiten.",
+          "Existen cuotas (solicitudes y tokens por minuto). En producción maneja <code>ThrottlingException</code> con reintentos y espera exponencial.",
+          "<strong>Trade-off frente a la API directa del proveedor:</strong> Bedrock integra IAM, facturación y red privada de AWS, pero las funciones más nuevas de un modelo a veces llegan antes a la API directa. Verifica en la documentación vigente lo que necesitas.",
+          "Para datos sensibles, revisa los términos vigentes de AWS sobre uso de prompts y respuestas, y piensa con cuidado qué registras en logs."
+        ],
+        practice: [
+          "En la consola de Bedrock abre el playground, elige un modelo y prueba un prompt. Fíjate en el conteo de tokens de entrada y salida.",
+          "Crea un rol de IAM con solo <code>bedrock:InvokeModel</code> y úsalo desde un script como el de arriba.",
+          "Quita el permiso y confirma que aparece <code>AccessDeniedException</code>.",
+          "Envía el mismo prompt a dos modelos distintos y compara respuesta, tokens y costo estimado."
+        ]
+      },
+      why: "Bedrock es el puente entre la IA y todo lo anterior: <strong>IAM</strong> decide quién puede llamar al modelo y <strong>AWS</strong> te factura. Elegir Bedrock en vez de llamar directo a la API de un proveedor suele ser una decisión de gobierno: dónde viven los datos, cómo se autentica y cómo se paga."
+    },
+    {
+      id: "rpc",
+      category: "database", order: 3, requires: ["rls", "security-definer"], tags: ["seguridad"], collections: ["col:supabase"],
+      bullets: [
+        "<strong>Qué es</strong> Llamar desde tu app a una función que vive en la base de datos, pidiéndola por su nombre.",
+        "<strong>Sirve para</strong> Hacer varios pasos juntos y de forma atómica, o lógica que no cabe en un simple select o insert.",
+        "<strong>Ojo</strong> Cada función expuesta por RPC es una puerta nueva a tu base de datos."
+      ],
+      topic: "Funciones y API",
+      term: "RPC — Remote Procedure Call",
+      kid: "Imagina un libro de recetas en la cocina. En vez de explicarle al cocinero cada paso por teléfono, le dices solo el nombre: “haz la receta 5”, y él la prepara completa. RPC es decir desde lejos el nombre de la receta (la función) para que la base de datos la ejecute.",
+      analogy: "RPC significa <em>llamada a procedimiento remoto</em>: pedir que se ejecute una función que vive en otro lugar. En Supabase, ese otro lugar es tu base de datos. Normalmente tu app lee o escribe tablas directamente (<em>select</em>, <em>insert</em>). Con RPC escribes la lógica una vez, como función SQL, y la app solo dice “ejecuta esta función con estos datos”. Supabase publica automáticamente como endpoints las funciones del schema <code>public</code>, y por eso <code>supabase.rpc('nombre')</code> funciona sin armar un servidor aparte.",
+      examples: [
+        {
+          label: "Crear una función que se pueda llamar por RPC",
+          verdict: "info",
+          code: String.raw`create or replace function public.cerrar_tarea(p_id uuid)
+returns void
+language plpgsql
+security invoker          -- es el valor por defecto: corre como quien llama
+set search_path = public
+as $$
+begin
+  update public.tareas
+     set estado = 'cerrada'
+   where id = p_id;
+end;
+$$;`,
+          note: "Ejemplo genérico (tabla <code>tareas</code>), no de tus proyectos. Como es <code>security invoker</code>, las políticas de RLS de <code>tareas</code> siguen aplicando: si quien llama no puede actualizar esa fila, no se actualiza."
+        },
+        {
+          label: "Llamarla desde la app",
+          verdict: "info",
+          code: String.raw`const { data, error } = await supabase.rpc('cerrar_tarea', {
+  p_id: tareaId,
+})`,
+          note: "Por debajo es un <code>POST /rest/v1/rpc/cerrar_tarea</code>. Los argumentos viajan en el cuerpo y el resultado vuelve como cualquier otra respuesta de la API."
+        },
+        {
+          label: "Lo que no debes dejar: SECURITY DEFINER sin control",
+          verdict: "bad",
+          code: String.raw`create function public.vaciar_tareas()
+returns void
+language sql
+security definer
+as $$
+  delete from public.tareas;
+$$;`,
+          note: "Corre con permisos de su dueño (se salta RLS), no valida quién llama, no fija <code>search_path</code> y, al crearla, Postgres da EXECUTE a <code>PUBLIC</code>. Como la API la expone, <strong>cualquiera podría vaciar la tabla</strong>."
+        },
+        {
+          label: "Cerrar la puerta: quién puede ejecutarla",
+          verdict: "allow",
+          code: String.raw`revoke execute on function public.vaciar_tareas() from public, anon;
+grant  execute on function public.vaciar_tareas() to authenticated;`,
+          note: "Quita el permiso por defecto y concédelo solo a quien corresponda. Aun así, una función SECURITY DEFINER debería comprobar dentro quién llama (por ejemplo con <code>auth.uid()</code> y la tabla de roles)."
+        },
+        {
+          label: "Auditoría rápida: qué funciones tienes expuestas",
+          verdict: "info",
+          code: String.raw`select p.proname,
+       p.prosecdef                              as security_definer,
+       pg_get_userbyid(p.proowner)              as dueno,
+       p.proconfig                              as config,
+       has_function_privilege('anon', p.oid, 'EXECUTE') as anon_puede
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.prokind = 'f';`,
+          note: "Busca primero filas con <code>security_definer = true</code> y <code>anon_puede = true</code>: son las más urgentes. En las SECURITY DEFINER, <code>config</code> debería mostrar un <code>search_path</code> fijo."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Por defecto la función corre como quien llama</strong> (SECURITY INVOKER), así que RLS sigue protegiendo. El riesgo aparece al marcarla SECURITY DEFINER: RLS deja de ayudarte y la función debe validar quién llama.",
+          "Al crear una función, Postgres concede EXECUTE a <code>PUBLIC</code> por defecto y la API la expone. Sin <code>REVOKE</code>, <code>anon</code> puede llamarla. Concede solo a <code>authenticated</code> o al rol que corresponda.",
+          "No decidas permisos con un parámetro que el cliente puede falsificar. Nunca recibas un <code>user_id</code> como argumento para autorizar: obtén la identidad dentro de la función con <code>auth.uid()</code>.",
+          "Lo que no quieras como API no debe vivir en un schema expuesto: ponlo en uno aparte (por ejemplo <code>private</code>) y llámalo desde otras funciones.",
+          "Cambiar los argumentos de una función crea una <strong>sobrecarga nueva</strong>, no reemplaza la anterior: la versión vieja sigue expuesta. Revísalo al migrar."
+        ],
+        practice: [
+          "En un proyecto de prueba, crea una función simple sin SECURITY DEFINER y llámala con <code>supabase.rpc</code> como usuario autenticado.",
+          "Llámala ahora sin login (rol <code>anon</code>) y entiende por qué falla o por qué no.",
+          "Corre la consulta de auditoría y encuentra qué funciones SECURITY DEFINER puede ejecutar <code>anon</code>.",
+          "Corrige una con <code>REVOKE</code> y <code>GRANT</code> y repite la consulta para confirmar el cambio."
+        ]
+      },
+      why: "RPC es el puente entre tu app y la lógica de la base de datos: da potencia (pasos atómicos, menos viajes) pero cada función expuesta es <strong>API pública</strong>. Junta las dos tarjetas anteriores: RLS protege las tablas y SECURITY DEFINER puede saltárselo, así que lo que se expone por RPC se revisa con lupa. (Ojo: “RPC” también es un término más general, como en gRPC; aquí hablamos del sentido de Supabase.)"
+    },
+    {
+      id: "bd-compartida",
+      category: "arquitectura", order: 1, requires: ["rls"], tags: ["decisión"],
+      bullets: [
+        "<strong>Qué es</strong> Decidir si dos o más apps usan la misma base de datos (en Supabase, el mismo proyecto) o cada una tiene la suya.",
+        "<strong>Conviene compartir</strong> Cuando es un mismo dominio, con las mismas personas, un solo dueño del esquema y sin obligación de aislar datos.",
+        "<strong>Conviene separar</strong> Cuando son dominios distintos, con equipos o ritmos distintos, datos sensibles, o cuando una app puede tumbar a la otra."
+      ],
+      topic: "Decisiones de arquitectura",
+      term: "¿Compartir la base de datos o separarla?",
+      kid: "Imagina dos familias que viven en la misma casa. Comparten cocina, refrigerador y llaves. Si son una sola familia, es cómodo. Pero si son dos familias distintas, cuando una deja la cocina hecha un desastre, la otra no puede cocinar, y cualquiera puede abrir el cajón de la otra. A veces conviene una casa; a veces, dos casas con una puerta entre ellas.",
+      analogy: "Una base de datos compartida es una casa compartida: <em>una sola máquina</em> (CPU, memoria, conexiones), <em>un solo esquema</em> que todos pueden modificar y <em>un solo login</em>. Eso trae tres acoplamientos distintos, y conviene mirarlos por separado: <em>de capacidad</em> (si una app satura la base, la otra se cae), <em>de datos</em> (una app lee o escribe las tablas de la otra) y <em>de identidad</em> (los mismos usuarios sirven en ambas). Compartir no es malo: es barato, simple y permite cruzar datos sin APIs. El problema aparece cuando juntas cosas que deberían poder fallar, cambiar o auditarse por separado. Hay además un punto medio: una sola base con <em>esquemas</em> separados por app (por ejemplo <code>ops</code> y <code>salud</code> en vez de todo en <code>public</code>), con un solo dueño de migraciones. Ordena los datos, pero no resuelve el acoplamiento de capacidad.",
+      examples: [
+        {
+          label: "Caso GeHo: compartir es lo correcto",
+          verdict: "allow",
+          code: String.raw`Apps:      web · móvil · RAG · widget
+Dominio:   uno solo (Planner, horas, personas)
+Usuarios:  los mismos en todas
+Esquema:   un dueño de migraciones
+Datos:     sin obligación de aislar
+→ Una sola base. Separarla obligaría a
+  sincronizar datos que son, de verdad, los mismos.`,
+          note: "Son cuatro puertas a la misma casa, no cuatro casas. Separar crearía trabajo (APIs, sincronización, logins duplicados) sin quitar ningún riesgo real."
+        },
+        {
+          label: "Caso Oxiwork + OPS Oxiquim: compartir costó caro",
+          verdict: "bad",
+          code: String.raw`Apps:      oxiwork (salud ocupacional)
+           oxiquim-ops (observaciones de seguridad)
+Dominio:   distinto · equipos y ritmos distintos
+Datos:     salud = sensibles (Ley 21.719)
+Esquema:   dos carpetas de migraciones activas
+Capacidad: 2026-10-05 · el listado de /ops bajaba
+           ~85 MB por request → timeouts en
+           PostgREST → cayeron las DOS apps
+Datos:     oxiwork igual lee y escribe
+           safety_observations y ops_status_history`,
+          note: "El incidente fue de capacidad, no de datos: una pantalla de OPS saturó la base que usaba Oxiwork. Además, la Decisión 002 decía que ninguna app necesitaba datos de la otra, y el código mostró que Oxiwork tiene un dashboard y un análisis de OPS. La respuesta (2026-10-08): son dos productos, usados por casi los mismos admins, y Oxiwork solo necesita <em>mirar</em> un resumen de OPS. Eso es una vista de solo lectura, no un producto compartido, así que la dirección es separar. La pantalla de Oxiwork debería pedir solo agregados (conteos, estados) a una función, para que al separar baste cambiar de dónde vienen los datos."
+        },
+        {
+          label: "Caso OXIMETRICS: separar desde el día uno",
+          verdict: "allow",
+          code: String.raw`Proyecto Supabase propio
++ misma convención de roles que Oxiwork
+  (profiles · user_roles · app_role)
+→ No suma carga a la base compartida
+→ Si algún día se integra, los roles
+  ya calzan y no hay que traducir nada`,
+          note: "Separar no significa ser distintos en todo. Copiar la convención permite unir más adelante sin migrar a ciegas."
+        },
+        {
+          label: "Las preguntas para decidir",
+          verdict: "info",
+          code: String.raw`1. ¿Es el mismo dominio y las mismas personas?
+2. ¿Una app lee o escribe tablas de la otra?
+   ¿Esa función es deliberada?
+3. ¿Hay UN dueño de migraciones y del esquema?
+4. ¿Si una app satura la base, es aceptable
+   que la otra se caiga?
+5. ¿Algún contrato o ley exige aislar los datos
+   (salud, datos personales, otro cliente)?
+6. ¿Los equipos y los ritmos de despliegue
+   son los mismos?
+7. ¿Cuánto cuesta separar después?
+   (usuarios en auth.users, FKs cruzadas, código)
+
+Mayoría "sí" en 1, 3 y 6, y "no" en 5
+→ compartir es razonable.
+Un "sí" en 5, o "no" en 4
+→ separar, o al menos planificarlo con fecha.`,
+          note: "No es una suma de puntos. La pregunta 5 sola puede decidir: si la ley o el contrato exige aislar, la comodidad deja de importar."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>“No compartimos datos” rara vez es cierto.</strong> Antes de decidir, busca en el código de cada app las tablas que lee y escribe (por ejemplo <code>grep</code> de <code>.from('</code>). La Decisión 002 asumía cero acoplamiento de datos y no era así.",
+          "<strong>El login compartido es el costo oculto.</strong> Si ambas apps usan el mismo <code>auth.users</code>, separar obliga a migrar usuarios, contraseñas o sesiones. Cuanto más tiempo pase, más caro.",
+          "<strong>Esquemas separados ordenan, pero no aíslan la capacidad.</strong> Siguen compartiendo CPU, memoria y conexiones. Sirven contra el desorden, no contra los incidentes de rendimiento.",
+          "<strong>Separar con FKs o código cruzado</strong> obliga a reemplazarlos por una API, una vista o una réplica. Decide eso antes de mover datos, no después.",
+          "<strong>No separes bajo presión de un incidente ni sin staging.</strong> Primero apaga el incendio en sitio; la migración es un proyecto con plan, respaldo y vuelta atrás.",
+          "<strong>“Diferido” sin fecha suele ser “nunca”.</strong> Toda decisión de diferir la separación necesita una fecha de revisión y un disparador concreto (un contrato, una ley, un umbral de carga)."
+        ],
+        practice: [
+          "Elige dos apps que comparten base. Lista qué tablas usa cada una y marca las que usan ambas.",
+          "Responde las 7 preguntas de arriba por escrito, una línea cada una, y anota cuáles no sabes responder.",
+          "Para cada respuesta que no sepas, anota quién la sabe (cliente, legal, el equipo de la otra app).",
+          "Escribe la decisión como un registro de decisión (ADR): contexto, opciones, elección, consecuencias y fecha de revisión."
+        ]
+      },
+      why: "Es una decisión <strong>cara de revertir</strong>: separar después implica migrar datos, usuarios y código, y juntar después implica reconciliar esquemas. Por eso se decide con preguntas explícitas y no por costumbre. En GeCo ya tenemos los tres casos: GeHo (compartir está bien), Oxiwork y OPS (compartir causó una caída el 2026-10-05) y OXIMETRICS (separar desde el inicio, con la misma convención)."
+    }
+,
+    {
+      id: "serverless",
+      category: "cloud", order: 4, requires: ["aws"], tags: [],
+      bullets: [
+        "<strong>Qué es</strong> Un modelo donde escribes el código y el proveedor se encarga de los servidores, del escalado y de los parches.",
+        "<strong>Sirve para</strong> Cargas que llegan a ratos o en picos, sin pagar por máquinas encendidas sin hacer nada.",
+        "<strong>Ojo</strong> Sí hay servidores; solo que no los administras tú. Y tiene límites de tiempo y de memoria por ejecución."
+      ],
+      topic: "Modelos de cómputo",
+      term: "SERVERLESS",
+      kid: "Imagina que quieres jugar fútbol pero no quieres comprar ni cuidar una cancha. Cada vez que quieres jugar, llega una cancha lista, juegas el rato que necesites y te cobran solo esos minutos. La cancha existe, pero alguien más la cuida.",
+      analogy: "Con un servidor tradicional (como una máquina EC2) alquilas un computador y lo tienes encendido, lo uses o no: tú lo actualizas, lo escalas y lo vigilas. En <em>serverless</em> subes una función o un servicio y el proveedor decide dónde y cuándo correrlo: crea más copias si llega mucha gente, y baja a cero si no llega nadie. Pagas por lo que se ejecuta, no por lo que está encendido. El nombre confunde: <strong>sí hay servidores</strong>, pero no son tu problema. Dentro de serverless hay dos sabores: <em>funciones</em> (Lambda, Edge Functions), que corren cuando algo las dispara, y <em>servicios gestionados</em> (S3, DynamoDB, Aurora Serverless), que escalan solos.",
+      examples: [
+        {
+          label: "Servidor tradicional vs serverless, lado a lado",
+          verdict: "info",
+          code: String.raw`                EC2 (servidor)         Serverless (función)
+Quién lo opera  tú                     el proveedor
+Escalado        lo configuras tú       automático
+Sin tráfico     sigue encendido        baja a cero
+Cobro           por hora encendido     por ejecución y recursos usados
+Estado          puede vivir en disco   no lo asumas: guárdalo afuera
+Duración        sin límite             límite por ejecución`,
+          note: "No es que uno sea mejor: son herramientas distintas. Una API con tráfico parejo y pesado a veces sale más barata en un servidor; una tarea que corre 5 veces al día, casi siempre en serverless."
+        },
+        {
+          label: "Un caso típico de serverless",
+          verdict: "allow",
+          code: String.raw`Alguien sube una foto a un bucket de S3
+   → S3 dispara un evento
+   → una función Lambda genera la miniatura
+   → la guarda en otro bucket
+
+Sin tráfico: no se ejecuta nada y no pagas cómputo.
+Mil fotos juntas: AWS crea las copias que haga falta.`,
+          note: "Es el patrón de arquitectura dirigida por eventos: algo ocurre, algo reacciona. La función no “está corriendo” esperando."
+        },
+        {
+          label: "Cuando serverless NO es lo ideal",
+          verdict: "bad",
+          code: String.raw`- Proceso que dura horas sin parar
+- Conexión abierta permanente con mucho estado en memoria
+- Tráfico enorme y constante, donde pagar por ejecución
+  sale más caro que una máquina fija
+- Quieres control total del sistema operativo`,
+          note: "Para lo primero, Lambda tiene un máximo de 15 minutos por ejecución. Para lo último, una máquina o un contenedor."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Arranque en frío (cold start):</strong> la primera ejecución, o cuando se crea una copia nueva, tarda más porque hay que preparar el entorno. Importa en rutas donde el usuario espera.",
+          "<strong>Sin estado local:</strong> no guardes datos en memoria o en disco esperando que la próxima ejecución los encuentre. Puede correr en otra copia. El estado va en una base de datos o en un almacenamiento externo.",
+          "<strong>Límites por ejecución:</strong> tiempo máximo, memoria, tamaño de la respuesta. Diseña para trabajos cortos, y las tareas largas se parten o se mandan a una cola.",
+          "<strong>El costo escala con el abuso:</strong> si alguien llama tu función un millón de veces, pagas un millón de ejecuciones. Pon límites, autenticación y alertas de gasto.",
+          "<strong>Dependencia del proveedor:</strong> el código que usa eventos y permisos propios de un proveedor cuesta más de mover. Un runtime abierto como Deno reduce ese riesgo."
+        ],
+        practice: [
+          "Escribe en una línea qué parte de una app tuya correría bien en serverless y cuál no, y por qué.",
+          "Para esa parte, anota qué la dispararía (una petición HTTP, un archivo nuevo, una hora) y dónde guardaría su estado.",
+          "Estima cuántas veces al día se ejecutaría y compáralo con tener una máquina encendida. ¿Cuál es más barata a ese ritmo?"
+        ]
+      },
+      why: "Es la idea detrás de AWS Lambda y de las Edge Functions de Supabase. Si entiendes qué delegas (la operación) y qué conservas (el diseño, la seguridad, el estado), entiendes por qué una función serverless tiene límites de tiempo, por qué no guarda datos y por qué cada llamada pública cuesta plata."
+    },
+    {
+      id: "lambda",
+      category: "cloud", order: 5, requires: ["aws", "iam", "serverless"], tags: ["seguridad"],
+      bullets: [
+        "<strong>Qué es</strong> El servicio de AWS para correr una función de código en respuesta a un evento, sin administrar servidores.",
+        "<strong>Sirve para</strong> Reaccionar a algo (una petición HTTP, un archivo nuevo en S3, un mensaje en una cola, una hora) con cómputo que se paga por ejecución.",
+        "<strong>Ojo</strong> Máximo 15 minutos por ejecución, y la función necesita un rol de IAM con solo los permisos que usa."
+      ],
+      topic: "Cómputo serverless en AWS",
+      term: "AWS Lambda (funciones Lambda)",
+      kid: "Imagina un ayudante que duerme hasta que suena un timbre. Cuando suena, se despierta, hace exactamente la tarea que le enseñaste y vuelve a dormir. Solo le pagas por el rato que estuvo despierto.",
+      analogy: "Una <em>función Lambda</em> es un trozo de código (en Python, Node.js, Java y otros lenguajes) con un punto de entrada llamado <em>handler</em>. Algo la dispara: una llamada HTTP a través de API Gateway, un archivo en S3, un mensaje en SQS, un cron de EventBridge. Lambda crea un <em>entorno de ejecución</em>, corre tu handler y, si llegan más eventos juntos, crea más entornos en paralelo. Tú eliges la memoria (de 128 MB a 10 240 MB) y la CPU crece en proporción a esa memoria. Cada ejecución puede durar hasta 900 segundos (15 minutos). La función corre con un <em>rol de ejecución</em> de IAM: ese rol es todo lo que ella puede hacer en AWS.",
+      examples: [
+        {
+          label: "Una función mínima en Python (ejemplo genérico, no de tus proyectos)",
+          verdict: "info",
+          code: String.raw`import json
+
+# Esto corre UNA vez por entorno (fase de inicialización)
+saludo = "Hola"
+
+def handler(event, context):
+    # Esto corre en CADA invocación
+    nombre = event.get("nombre", "mundo")
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"mensaje": f"{saludo}, {nombre}"})
+    }`,
+          note: "El código fuera del handler se ejecuta al crear el entorno y se reutiliza mientras ese entorno siga vivo. Por eso ahí van cosas caras de crear, como clientes de base de datos. Lo de dentro corre en cada evento."
+        },
+        {
+          label: "El rol de ejecución: solo lo que la función necesita",
+          verdict: "allow",
+          code: String.raw`{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject"],
+    "Resource": "arn:aws:s3:::mi-bucket/entrada/*"
+  }]
+}`,
+          note: "Esta función solo puede leer objetos de una carpeta de un bucket. Si alguien logra hacerla ejecutar algo malo, el daño queda limitado a eso. Es el principio de mínimo privilegio de la tarjeta de IAM."
+        },
+        {
+          label: "Ciclo de vida: por qué hay arranques en frío",
+          verdict: "info",
+          code: String.raw`Primer evento (entorno nuevo):
+  INIT   crea el entorno, carga el código, corre lo de fuera del handler
+  INVOKE corre el handler
+        ↓ el entorno se congela
+
+Siguiente evento (entorno reutilizado):
+  INVOKE corre el handler   ← sin INIT: arranque "en caliente"
+
+Eventos simultáneos: cada uno necesita su propio entorno,
+así que varios pueden hacer INIT a la vez.`,
+          note: "Un arranque en frío es la suma de INIT más INVOKE. AWS dice que no conviene depender de que el entorno se reutilice: puede no pasar."
+        },
+        {
+          label: "Un error común: pedirle a Lambda lo que no puede dar",
+          verdict: "bad",
+          code: String.raw`Tarea: procesar un archivo que tarda 40 minutos
+Idea:  "subo el timeout al máximo"
+Límite: 15 minutos (900 s), no se puede aumentar
+
+Mejor: partir el trabajo en trozos y encolarlos (SQS),
+       o usar un contenedor / otro servicio de cómputo`,
+          note: "AWS publica el tope de 900 segundos como un límite de configuración de la función. Cuando una tarea no cabe, se rediseña, no se negocia el límite."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Timeout por defecto de 3 segundos.</strong> Una función nueva puede fallar por eso aunque el código esté bien. Ajústalo al trabajo real, sin subirlo al máximo por costumbre.",
+          "<strong>Memoria = CPU.</strong> Más memoria da más CPU, y a veces una función termina antes y sale más barata aunque cueste más por segundo. Se mide, no se adivina (existe la herramienta AWS Lambda Power Tuning).",
+          "<strong>Los eventos asíncronos se reintentan.</strong> Si tu función falla, Lambda puede volver a ejecutarla con el mismo evento. Escríbela para que correrla dos veces no cobre dos veces ni duplique registros (idempotencia).",
+          "<strong>No guardes secretos en el código ni en variables de entorno sin pensar.</strong> Usa Secrets Manager o Parameter Store y dale al rol solo el permiso de leer ese secreto.",
+          "<strong>Un rol con <code>*</code> es una función con llave maestra.</strong> Revisa los permisos con IAM Access Analyzer y los logs de CloudTrail.",
+          "<strong>Si la función está en una VPC,</strong> necesita una ruta de salida (NAT o endpoints) para llamar a internet o a servicios de AWS. Si no, se queda esperando hasta el timeout."
+        ],
+        practice: [
+          "Crea una función Lambda de prueba desde la consola con el código de arriba. Invócala con el evento <code>{\"nombre\": \"Juan\"}</code> y mira el log en CloudWatch.",
+          "Bájale el timeout a 1 segundo y agrégale <code>time.sleep(2)</code>. Observa el error de timeout en los logs.",
+          "Mira en el log la línea <code>REPORT</code>: busca <code>Duration</code>, <code>Memory Size</code> y, en el primer evento, <code>Init Duration</code>.",
+          "Revisa el rol de ejecución que AWS le creó y pregunta: ¿qué permisos tiene que no necesita?"
+        ]
+      },
+      why: "Lambda es la forma más conocida de serverless y te sirve de vara para medir las Edge Functions de Supabase: ambas son funciones que despiertan por un evento, ambas tienen límites, ambas dependen de qué permisos reciben. La diferencia más importante es dónde corren y con qué runtime, y eso está en la tarjeta de Edge Functions."
+    },
+    {
+      id: "edge-computing",
+      category: "cloud", order: 6, requires: ["aws"], tags: [],
+      bullets: [
+        "<strong>Qué es</strong> Ejecutar código o guardar datos en puntos cercanos al usuario o al dispositivo, en vez de en un solo centro de datos lejano.",
+        "<strong>Sirve para</strong> Bajar la latencia (el tiempo de ida y vuelta) y el tráfico hacia el centro, y decidir rápido cerca del usuario.",
+        "<strong>Ojo</strong> Si el código está cerca del usuario pero la base de datos sigue lejos, igual esperas esa distancia."
+      ],
+      topic: "Dónde corre el código",
+      term: "EDGE COMPUTING (cómputo en el borde)",
+      kid: "Imagina que tu cocina central queda al otro lado del país. Cada vez que pides algo, tarda en llegar. Con <em>edge</em>, ponen mini cocinas cerca de tu casa: las cosas simples las resuelven ahí y solo mandan a la cocina grande lo que de verdad lo necesita.",
+      analogy: "Un servicio normal en la nube corre en una <em>región</em>, por ejemplo São Paulo. Un usuario en Madrid le habla a ese centro de datos, y la distancia suma milisegundos a cada petición. <em>Edge computing</em> es mover parte del trabajo a puntos cercanos al usuario (los PoP de una red de entrega de contenido, torres de telefonía, o incluso el propio dispositivo). Sirve para lo que se decide rápido y con poco dato: validar una sesión, redirigir, cambiar encabezados, probar una variante A/B, filtrar datos de sensores antes de enviarlos. La nube central sigue haciendo lo pesado y lo que necesita los datos completos. Hay dos sentidos de la palabra, y conviene no mezclarlos: el <em>edge de red</em> (código en una red global de servidores) y el <em>edge de dispositivos</em> (cómputo en la fábrica, el auto o la cámara).",
+      examples: [
+        {
+          label: "La idea en un diagrama",
+          verdict: "info",
+          code: String.raw`SIN edge
+Usuario (Madrid) ───────────────► Región AWS (São Paulo)
+                 ida y vuelta larga
+
+CON edge
+Usuario (Madrid) ──► Nodo cercano (Madrid)
+                          │  lo simple se resuelve aquí
+                          └──► Región central, solo si hace falta`,
+          note: "El beneficio es menor distancia. No es magia: lo que necesite hablar con el centro igual paga ese viaje."
+        },
+        {
+          label: "Qué sí conviene hacer en el borde",
+          verdict: "allow",
+          code: String.raw`- Verificar un token o una cookie antes de dejar pasar
+- Redirigir según país o idioma
+- Agregar o quitar encabezados HTTP
+- A/B testing
+- Responder desde caché
+- En IoT: filtrar y resumir datos del sensor antes de subirlos`,
+          note: "Trabajos cortos, sin mucho estado y que no dependen de una base de datos lejana."
+        },
+        {
+          label: "La trampa: el código en el borde y los datos en el centro",
+          verdict: "bad",
+          code: String.raw`Usuario (Madrid) → función en el borde (Madrid): 10 ms
+Función → base de datos (São Paulo):   200 ms  × 3 consultas
+Total ≈ 600 ms
+
+Alternativa: correr la función cerca de la base de datos
+(en Supabase, "regional invocation"), porque aquí
+lo que domina es hablar con la base, no el usuario.`,
+          note: "Los números son ilustrativos, no mediciones. La regla es medir dónde está el tiempo antes de decidir dónde poner el código."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Latencia a la base de datos.</strong> Poner la función en el borde pero dejar los datos lejos puede salir peor que tenerlo todo en una región. Mide el recorrido completo, no solo la primera etapa.",
+          "<strong>Runtime limitado.</strong> El borde suele ofrecer APIs más acotadas que un servidor Node completo y límites de CPU y memoria más estrictos. No todo el código corre ahí.",
+          "<strong>Consistencia de datos.</strong> Datos replicados en muchos puntos pueden estar desfasados un instante. Para saldos o permisos, la fuente de verdad es una sola.",
+          "<strong>Más puntos de despliegue.</strong> Más lugares donde algo puede fallar o quedar desactualizado, y más difícil de depurar.",
+          "<strong>“Edge” es una palabra de marketing flexible.</strong> Pregunta siempre dónde corre exactamente y cuántos puntos hay. No todos los proveedores que dicen edge tienen un nodo en tu ciudad."
+        ],
+        practice: [
+          "Mide la latencia de tu app desde otro país (una herramienta de prueba global) y compárala con la tuya.",
+          "De una app tuya, lista tres cosas que podrían resolverse sin hablar con la base de datos. Esas son las candidatas a edge.",
+          "Anota cuántas consultas hace una petición típica a la base. Si son varias, multiplícalas por la distancia al centro."
+        ]
+      },
+      why: "Te ayuda a distinguir tres ideas que se confunden: el <strong>cloud central</strong> (una región), <strong>serverless</strong> (quién opera) y <strong>edge</strong> (dónde corre). Una función puede ser serverless sin estar en el borde, y una función en el borde puede estar lejos de tus datos. La tarjeta de Edge Functions de Supabase se entiende solo con esta distinción."
+    },
+    {
+      id: "smtp",
+      category: "backend", order: 1, requires: [], tags: ["seguridad"],
+      bullets: [
+        "<strong>Qué es</strong> El protocolo estándar con el que se envían correos entre programas y servidores (Simple Mail Transfer Protocol).",
+        "<strong>Sirve para</strong> Que tu app mande correos (confirmación de cuenta, avisos) a través de un servidor de correo con tus credenciales.",
+        "<strong>Ojo</strong> Para enviar desde una app se usa el puerto 587 (STARTTLS) o el 465 (TLS implícito), no el 25."
+      ],
+      topic: "Protocolos de integración",
+      term: "SMTP — Simple Mail Transfer Protocol",
+      kid: "Imagina el correo postal. SMTP es el cartero que lleva tu carta de la oficina de correos hasta la oficina del destinatario. No es el buzón donde la recibes (eso es otro protocolo, como IMAP): solo se encarga de llevarla.",
+      analogy: "SMTP es el protocolo de <em>envío</em>. Tu aplicación se conecta a un servidor SMTP, se identifica, le entrega el mensaje (remitente, destinatario, asunto, cuerpo) y ese servidor lo transmite hacia el servidor del destinatario. Hay dos usos distintos, con puertos distintos: el <em>envío desde un cliente o app</em> (submission), que va por el puerto 587 con STARTTLS (RFC 6409) o por el 465 con TLS implícito (reconfirmado por RFC 8314), y la <em>transferencia entre servidores</em> (relay), que usa el puerto 25 (RFC 5321). Para una aplicación, la regla es: usa 587 o 465, con autenticación, nunca el 25. En Supabase, el caso más común es el <em>SMTP personalizado</em> de Auth, para que los correos de confirmación y de recuperación salgan desde tu dominio con tu proveedor.",
+      examples: [
+        {
+          label: "Los puertos, qué es cada uno",
+          verdict: "info",
+          code: String.raw`25   servidor ↔ servidor (relay)           RFC 5321
+587  app → servidor, STARTTLS               RFC 6409
+465  app → servidor, TLS desde el inicio    RFC 8314
+2525 alternativa de algunos proveedores, sin RFC
+
+STARTTLS: parte en texto plano y "sube" a cifrado.
+TLS implícito: cifrado desde el primer byte.`,
+          note: "RFC 8314 recomienda TLS implícito cuando se puede. En la práctica, usa el que tu proveedor documente."
+        },
+        {
+          label: "Los cuatro datos que siempre hay que configurar",
+          verdict: "allow",
+          code: String.raw`Servidor:   smtp.tu-proveedor.com
+Puerto:     587   (o 465)
+Seguridad:  STARTTLS (o TLS/SSL)
+Usuario y contraseña (o clave de API) del proveedor`,
+          note: "Esos datos son secretos: van en variables de entorno o en un gestor de secretos, nunca en el código ni en el frontend."
+        },
+        {
+          label: "Mandar correo desde una Edge Function de Supabase",
+          verdict: "bad",
+          code: String.raw`// Conexión SMTP directa al puerto 587
+// → la plataforma NO permite conexiones salientes
+//   a los puertos 25 y 587 desde Edge Functions.
+
+// Alternativas:
+// 1. SMTP por el puerto 465
+// 2. La API HTTP del proveedor de correo (más común)
+// 3. SMTP personalizado en Supabase Auth,
+//    para los correos de autenticación`,
+          note: "La documentación de límites de Edge Functions lo indica. Por eso muchos proveedores ofrecen una API HTTP, que sí pasa por el puerto 443."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Enviar no es entregar.</strong> Un correo puede salir bien y terminar en spam. Para que llegue hay que configurar en el DNS del dominio los registros SPF, DKIM y DMARC.",
+          "<strong>No uses el puerto 25 para enviar desde una app.</strong> Muchos proveedores y nubes lo bloquean para frenar el spam, y no está pensado para eso.",
+          "<strong>Cuida el seguimiento de enlaces.</strong> Algunos proveedores reescriben los enlaces de los correos y pueden romper los enlaces de confirmación de Auth. Supabase recomienda desactivar el link tracking.",
+          "<strong>El SMTP incorporado de Supabase es solo para probar.</strong> Tiene límites muy bajos de envíos por hora. Para producción se configura un SMTP propio.",
+          "<strong>Las credenciales SMTP son secretos con poder.</strong> Con ellas se puede mandar correo en nombre de tu dominio. Rótalas si se filtran.",
+          "<strong>Un correo no es una transacción.</strong> Puede fallar, demorar o llegar duplicado. Si es crítico, guarda el estado del envío y reintenta con cuidado."
+        ],
+        practice: [
+          "Busca en la documentación de tu proveedor de correo qué puerto y qué seguridad recomienda, y compáralo con la tabla de arriba.",
+          "Mira las cabeceras de un correo que te llegó (“ver original”) y busca SPF, DKIM y DMARC con resultado pass o fail.",
+          "En un proyecto de prueba de Supabase, abre la configuración de SMTP de Auth y mira qué campos pide.",
+          "Revisa en el DNS de tu dominio si existen los registros TXT de SPF y DMARC."
+        ]
+      },
+      why: "Cada app que envía correos de confirmación o avisos usa SMTP, directamente o a través de una API que lo envuelve. Saber qué puerto sirve para qué evita horas de “no funciona”, y conectarlo con Supabase te ahorra el choque típico: la Edge Function que intenta conectarse al 587 y no puede."
+    },
+    {
+      id: "sftp",
+      category: "backend", order: 2, requires: [], tags: ["seguridad"],
+      bullets: [
+        "<strong>Qué es</strong> Un protocolo para subir, bajar y administrar archivos en un servidor remoto, cifrado y apoyado en SSH.",
+        "<strong>Sirve para</strong> Intercambiar archivos con terceros (bancos, clientes, proveedores) de forma segura y programada.",
+        "<strong>Ojo</strong> No es FTP con candado: es otro protocolo. No confundirlo con FTPS."
+      ],
+      topic: "Protocolos de integración",
+      term: "SFTP — SSH File Transfer Protocol",
+      kid: "Imagina un casillero con llave en la entrada de un edificio. Alguien te da una llave especial y solo con ella puedes dejar o sacar archivos. Todo lo que pasa por ese casillero va en una caja cerrada, así nadie en el camino puede mirarlo.",
+      analogy: "SFTP funciona sobre <em>SSH</em>, el mismo canal seguro que se usa para administrar servidores por terminal. Usa normalmente un solo puerto, el 22, tanto para los comandos como para los datos, y se autentica con usuario y contraseña o, mejor, con <em>claves SSH</em>. Es un protocolo distinto de FTP. Además existe <em>FTPS</em>, que sí es el FTP de siempre con una capa TLS, y usa varios puertos (el 21 y rangos de datos). Los dos cifran, pero no son compatibles entre sí. SFTP se usa mucho para integraciones empresariales: un proveedor deja un archivo CSV cada noche y tu sistema lo recoge. En AWS, el servicio <em>Transfer Family</em> ofrece un servidor SFTP gestionado que guarda los archivos directamente en S3.",
+      examples: [
+        {
+          label: "Usarlo desde la terminal",
+          verdict: "info",
+          code: String.raw`sftp -i ~/.ssh/mi_clave usuario@sftp.proveedor.com
+
+sftp> ls
+sftp> get reporte_2026-10-14.csv
+sftp> put respuesta.csv
+sftp> bye`,
+          note: "El mismo comando funciona contra un servidor de AWS Transfer Family: cambias el host y la clave. Los comandos (ls, get, put) son los básicos."
+        },
+        {
+          label: "SFTP vs FTPS vs FTP",
+          verdict: "info",
+          code: String.raw`FTP    sin cifrar                        puerto 21
+FTPS   FTP + TLS                         21 y rangos de datos
+SFTP   archivos sobre SSH (otro protocolo)  22, un solo puerto`,
+          note: "Dos de las tres cifran, pero solo SFTP lo hace por un único puerto. Eso simplifica mucho las reglas de firewall."
+        },
+        {
+          label: "Autenticar con clave y no con contraseña",
+          verdict: "allow",
+          code: String.raw`# 1. Generas un par de claves en tu máquina
+ssh-keygen -t ed25519 -f ~/.ssh/mi_clave
+
+# 2. Entregas la PÚBLICA (mi_clave.pub) al proveedor
+# 3. La PRIVADA (mi_clave) no sale nunca de tu control`,
+          note: "Quien tenga tu clave privada entra como tú. Trátala como una contraseña."
+        },
+        {
+          label: "Qué NO hacer",
+          verdict: "bad",
+          code: String.raw`- Dejar la contraseña del SFTP en el código
+- Guardar la clave privada en el repositorio
+- Aceptar la huella del servidor sin verificarla
+- Dar acceso a toda una carpeta cuando bastaba una`,
+          note: "La primera vez que te conectas, el cliente muestra la huella del servidor. Confírmala por otro canal antes de aceptarla."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>No es FTP con cifrado.</strong> Pedir “FTP seguro” puede significar SFTP o FTPS, y no se parecen. Pregunta cuál exactamente, con qué puerto y con qué método de autenticación.",
+          "<strong>Una conexión larga y con estado no calza con serverless.</strong> Una función de tiempo limitado que abre una sesión SFTP puede quedarse corta con archivos grandes. Para integraciones de archivos, un servicio gestionado o un proceso programado suele encajar mejor. [Probable]",
+          "<strong>Lee los archivos de forma defensiva.</strong> Un archivo que llega puede venir incompleto o repetido. Valida el formato, verifica que terminó de subir y haz el procesamiento idempotente.",
+          "<strong>Mínimo privilegio también aquí.</strong> Un usuario SFTP debería ver solo su carpeta. AWS Transfer Family lo permite con directorios de inicio y políticas de IAM.",
+          "<strong>Rotación y caducidad de claves.</strong> Las integraciones se olvidan y las claves quedan vivas por años. Anota quién las tiene y cuándo se cambian.",
+          "<strong>El puerto 22 es objetivo de ataques automáticos.</strong> Restringe por IP cuando se pueda y desactiva la contraseña a favor de claves."
+        ],
+        practice: [
+          "Genera un par de claves con <code>ssh-keygen -t ed25519</code> y mira qué contiene cada archivo (sin compartir el privado).",
+          "Si tienes acceso a algún servidor, conéctate con <code>sftp</code> y practica <code>ls</code>, <code>put</code> y <code>get</code>.",
+          "Escribe en una línea la diferencia entre SFTP y FTPS, incluyendo el puerto, sin mirar la tarjeta.",
+          "Imagina que un proveedor te deja un CSV cada noche. Dibuja los pasos para procesarlo sin duplicar ni perder filas."
+        ]
+      },
+      why: "SFTP sigue siendo una forma muy usada de intercambiar archivos con terceros, y la sigla se presta a confusión con FTPS. Saber que va sobre SSH y por un puerto te permite configurar firewalls, elegir autenticación y decidir qué servicio lo aloja, en vez de aprender por prueba y error."
+    },
+    {
+      id: "supabase-edge-functions",
+      category: "backend", order: 3, requires: ["serverless", "edge-computing"], tags: ["seguridad"], collections: ["col:supabase"],
+      bullets: [
+        "<strong>Qué es</strong> Funciones de TypeScript que corren en el servidor, en una red global, sobre el runtime abierto de Deno. Se disparan con una llamada HTTP.",
+        "<strong>Sirve para</strong> Lo que no debe hacerse en el navegador ni cabe en SQL: webhooks, integrar terceros como Stripe, usar secretos, llamar a una IA.",
+        "<strong>Ojo</strong> Por defecto exigen un JWT válido; con la clave de servicio saltas RLS, así que ese código se revisa con lupa."
+      ],
+      topic: "Supabase · Edge Functions",
+      term: "Edge Functions de Supabase",
+      kid: "Imagina un mensajero que vive cerca de ti. Le das un papel con una orden, él hace la tarea con la llave especial que tiene guardada (que tú no tienes) y te devuelve la respuesta. Tú nunca ves la llave.",
+      analogy: "Una <em>Edge Function</em> de Supabase es código TypeScript que corre en el servidor, no en el navegador. Supabase la despliega en una red global, cerca de los usuarios, y la ejecuta con <em>Deno</em>, un runtime abierto basado en V8. Es serverless: se crea cuando llega una petición y no administras servidores. La llamas por HTTP (<code>supabase.functions.invoke</code> o un POST a <code>/functions/v1/nombre</code>), y recibe automáticamente variables para hablar con tu proyecto (la URL y las claves). Sirve para lo que no debe vivir en el cliente (secretos, llaves de terceros), para webhooks entrantes (Stripe, GitHub), para integraciones y para tareas que no se expresan bien en SQL. <strong>No es lo mismo que una función de base de datos</strong> (la de la tarjeta RPC): esa corre dentro de Postgres, junto a los datos, y se escribe en SQL o PL/pgSQL. La Edge Function corre fuera de la base de datos y habla con ella por la red.",
+      examples: [
+        {
+          label: "Una Edge Function mínima (ejemplo genérico)",
+          verdict: "info",
+          code: String.raw`// supabase/functions/saludo/index.ts
+Deno.serve(async (req) => {
+  const { nombre } = await req.json();
+  return new Response(
+    JSON.stringify({ mensaje: "Hola, " + nombre }),
+    { headers: { "Content-Type": "application/json" } },
+  );
+});
+
+// Desplegar:  supabase functions deploy saludo`,
+          note: "Recibe una petición y devuelve una respuesta. Ese es todo el contrato: un handler HTTP."
+        },
+        {
+          label: "Llamarla desde la app, con la sesión del usuario",
+          verdict: "allow",
+          code: String.raw`const { data, error } = await supabase.functions.invoke(
+  "saludo",
+  { body: { nombre: "Juan" } }
+);`,
+          note: "El cliente envía el JWT de la sesión en la cabecera Authorization. Con verify_jwt activo (el valor por defecto), la plataforma lo valida antes de ejecutar tu código."
+        },
+        {
+          label: "Un webhook: el único caso típico sin JWT de usuario",
+          verdict: "deny",
+          code: String.raw`# supabase/config.toml
+[functions.stripe-webhook]
+verify_jwt = false
+
+// Y DENTRO de la función hay que verificar tú
+// la firma del proveedor (por ejemplo Stripe-Signature).`,
+          note: "Stripe no tiene un JWT de Supabase. Al apagar verify_jwt, el control ya no lo hace la plataforma: lo haces tú, con la firma del proveedor. Es el patrón que documenta Supabase."
+        },
+        {
+          label: "Edge Function vs función de base de datos",
+          verdict: "info",
+          code: String.raw`                  Función de BD (RPC)        Edge Function
+Dónde corre       dentro de Postgres         fuera, en el borde (Deno)
+Lenguaje          SQL / PL/pgSQL             TypeScript / JavaScript
+Cerca de los datos sí, en la misma máquina   no: habla por la red
+Llamar a un       difícil                    natural (fetch)
+tercero (Stripe)
+Secretos          no es su lugar             sí, como secretos del proyecto
+Permisos          rol del que llama /        tú decides el cliente:
+                  del dueño (DEFINER)        anon, usuario o service_role`,
+          note: "Regla práctica: si es lógica sobre datos, que corra junto a los datos. Si habla con el mundo exterior o usa secretos, Edge Function."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>El límite de CPU es de 2 segundos por petición</strong> (sin contar la espera de entrada y salida), con 256 MB de memoria. El tiempo total (wall clock) es de 150 s en el plan gratuito y 400 s en los de pago, y 150 s de espera máxima por respuesta. Verifica los valores vigentes, porque la documentación se ha actualizado.",
+          "<strong>La service_role se salta RLS.</strong> Si en la función creas el cliente con esa clave, ya no hay políticas que te protejan: la validación de quién es el usuario y qué puede hacer pasa a ser tu código. Prefiere un cliente con el JWT del usuario cuando puedas.",
+          "<strong>Con <code>verify_jwt = false</code> estás solo.</strong> Cualquiera en internet puede llamar la URL. Verifica una firma o una clave secreta dentro de la función, y compárala en tiempo constante.",
+          "<strong>CORS no viene configurado por ti.</strong> Si el navegador la llama, necesitas responder el preflight (OPTIONS) y poner los encabezados. Un <code>*</code> en producción deja a cualquier sitio leer las respuestas.",
+          "<strong>No puedes conectarte a los puertos 25 y 587.</strong> Para correo usa una API HTTP o el 465 (tarjeta de SMTP).",
+          "<strong>Los secretos se guardan como secretos del proyecto,</strong> no en el repositorio. Los nombres que empiezan con <code>SUPABASE_</code> están reservados.",
+          "<strong>Cada llamada pública cuesta.</strong> Una función abierta sin límites puede costar dinero y gatillar abusos."
+        ],
+        practice: [
+          "Con la CLI de Supabase, crea una función con <code>supabase functions new saludo</code> y córrela en local con <code>supabase functions serve</code>.",
+          "Llámala con <code>curl</code> sin el encabezado Authorization y observa el 401. Luego agrega un JWT válido.",
+          "Cambia <code>verify_jwt</code> a false para una función de prueba y escribe cómo vas a autenticar al que llama.",
+          "Escribe en dos líneas qué tarea tuya iría en una Edge Function y cuál en una función SQL expuesta como RPC, y por qué."
+        ]
+      },
+      why: "Junta las ideas de las tarjetas anteriores: es serverless (quién opera), corre en el borde (dónde) y, al ser código con secretos, es una puerta que tú diseñas. Sin entender que corre fuera de Postgres, se confunde con las funciones SQL; y sin entender verify_jwt y service_role, se abre un hueco que RLS ya no cubre."
+    },
+    {
+      id: "blockchain",
+      category: "arquitectura", order: 2, requires: [], tags: ["decisión"],
+      bullets: [
+        "<strong>Qué es</strong> Un registro compartido (libro mayor) donde los datos se agrupan en bloques encadenados con hashes, y la red acuerda cuál es la versión válida.",
+        "<strong>Sirve para</strong> Que varias partes que no confían entre sí compartan un registro difícil de alterar, sin depender de un dueño único.",
+        "<strong>Ojo</strong> Si hay un dueño de confianza, una base de datos normal casi siempre es más simple, más rápida y más barata."
+      ],
+      topic: "Decisiones de arquitectura",
+      term: "BLOCKCHAIN (cadena de bloques)",
+      kid: "Imagina un cuaderno gigante que todos los niños del colegio tienen copiado. Cada página nueva se pega a la anterior con un sello especial que depende de lo que dice la página de antes. Si alguien intenta cambiar una página vieja en su copia, el sello ya no calza y los demás lo notan enseguida.",
+      analogy: "Un <em>blockchain</em> es un libro mayor distribuido: muchos computadores (nodos) guardan la misma lista de transacciones agrupadas en <em>bloques</em>. Cada bloque incluye el <em>hash</em> (una huella criptográfica) del bloque anterior, así que alterar uno antiguo cambia su hash y rompe toda la cadena que viene después. Para añadir bloques nuevos, la red usa un <em>mecanismo de consenso</em> (prueba de trabajo, prueba de participación y otros) que decide cuál versión es la válida sin una autoridad central. El resultado, según el informe de NIST, es un registro resistente a manipulaciones y a prueba de alteraciones, mantenido por un grupo distribuido de participantes. Hay redes <em>públicas</em> (cualquiera participa) y <em>con permisos</em> (solo participantes autorizados). Los <em>contratos inteligentes</em> son programas que se ejecutan sobre la cadena. No es una base de datos mejor: es una forma distinta, con costos distintos, útil en un caso estrecho.",
+      examples: [
+        {
+          label: "La cadena, en miniatura",
+          verdict: "info",
+          code: String.raw`Bloque 1            Bloque 2            Bloque 3
+datos: A→B  10      datos: B→C  4       datos: C→A  2
+hash previo: 0      hash previo: H1     hash previo: H2
+hash: H1            hash: H2            hash: H3
+
+Si alguien cambia los datos del Bloque 1:
+  H1 cambia → el "hash previo" del Bloque 2 ya no calza
+  → todos los bloques siguientes quedan inválidos.`,
+          note: "Esto es lo que da la propiedad de “evidencia de manipulación”. No impide que alguien escriba algo falso al inicio, solo que lo cambie después sin que se note."
+        },
+        {
+          label: "Cuándo SÍ podría tener sentido",
+          verdict: "allow",
+          code: String.raw`- Varias organizaciones que no confían entre sí
+- Ninguna quiere (o puede) ser el "dueño" del registro
+- Importa la trazabilidad y que nadie reescriba el pasado
+- Se acepta pagar el costo de coordinar a todos`,
+          note: "Es la excepción, no la regla. Todas las condiciones tienen que cumplirse a la vez."
+        },
+        {
+          label: "Cuándo una base de datos normal basta (la mayoría)",
+          verdict: "bad",
+          code: String.raw`- Una sola empresa o equipo controla los datos
+- Hay un administrador de confianza
+- Necesitas corregir errores, borrar datos (por ejemplo,
+  por una ley de datos personales) y ser rápido
+- Quieres consultas, índices y transacciones simples
+
+→ Postgres, con RLS, auditoría y respaldos.`,
+          note: "Un registro de auditoría de solo-agregar (append-only) en Postgres, con permisos estrictos, resuelve gran parte de lo que la gente imagina que necesita una blockchain."
+        },
+        {
+          label: "Las preguntas para decidir",
+          verdict: "info",
+          code: String.raw`1. ¿Hay varias partes que escriben datos?
+2. ¿Esas partes desconfían entre sí?
+3. ¿Se pueden poner de acuerdo en un tercero de confianza?
+   (un administrador, un auditor, una autoridad)
+4. ¿Necesito que NADIE pueda borrar ni corregir?
+   ¿Choca con alguna ley que exija borrar datos?
+5. ¿Cuánto tráfico y qué latencia necesito?
+
+"No" en 1 o 2, o "sí" en 3 → base de datos normal.`,
+          note: "Es una guía, no una fórmula. La pregunta 4 es la que más se subestima: lo que no se puede borrar tampoco se puede corregir."
+        }
+      ],
+      senior: {
+        pitfalls: [
+          "<strong>Inmutable no significa verdadero.</strong> Una blockchain garantiza que un dato no se alteró después; no garantiza que el dato fuera correcto cuando se escribió (“basura entra, basura queda”).",
+          "<strong>Datos personales y derecho de supresión.</strong> Si guardas datos personales en una cadena inmutable, borrarlos puede ser imposible. En Chile, la Ley 21.719 exige tratar los datos personales con cuidado. Guarda en la cadena solo huellas (hashes) y mantén los datos reales fuera. [Probable, consúltalo con alguien de legal]",
+          "<strong>Rendimiento y costo.</strong> Una red que reparte el trabajo entre muchos nodos es más lenta y cara por transacción que una base de datos central.",
+          "<strong>Los oráculos son el eslabón débil.</strong> Un contrato inteligente no sabe nada del mundo exterior: alguien tiene que entregarle los datos, y ese alguien debe ser confiable.",
+          "<strong>Los contratos inteligentes tienen errores,</strong> y si son inmutables, corregirlos es difícil o imposible. Se auditan antes de publicar.",
+          "<strong>Distinguir redes públicas y con permisos.</strong> Una red con permisos entre pocos participantes se parece mucho más a una base de datos replicada con reglas de consenso."
+        ],
+        practice: [
+          "Calcula el hash SHA-256 de una frase, cambia una letra y vuelve a calcularlo. Observa cómo cambia por completo (por ejemplo con <code>echo -n \"hola\" | sha256sum</code>).",
+          "Toma un caso que te hayan propuesto como “blockchain” y respóndele las 5 preguntas de arriba por escrito.",
+          "Describe cómo harías un registro de auditoría de solo-agregar en Postgres: qué tabla, qué permisos y qué políticas de RLS.",
+          "Lee el resumen del informe NIST IR 8202 y anota cuáles son, según él, las limitaciones de la tecnología."
+        ]
+      },
+      why: "Es una de esas tecnologías que aparece en reuniones como solución para todo. Entender qué problema resuelve (confianza entre partes sin un árbitro) te permite decir con fundamentos que, en la mayoría de los proyectos, la respuesta es una base de datos bien diseñada, y reconocer el caso raro en que no lo es."
+    },
+  ];
+
+  const CATEGORIES = [
+    {
+      id: "database", short: "BD", name: "Base de datos",
+      what: "Dónde y cómo se guardan los datos, y quién puede leerlos o cambiarlos.",
+      covers: "Tablas, SQL, Postgres y Supabase, políticas de acceso por fila, funciones, migraciones.",
+      forWhat: "Que los datos sean correctos y estén protegidos aunque falle la aplicación."
+    },
+    {
+      id: "backend", short: "Backend", name: "Backend",
+      what: "La lógica que corre en un servidor, fuera del navegador: recibe peticiones, aplica reglas y habla con la base de datos.",
+      covers: "APIs, autenticación, funciones serverless y Edge Functions, webhooks, colas, protocolos de integración (SMTP, SFTP).",
+      forWhat: "Que las reglas del negocio no dependan de lo que el usuario pueda manipular en su pantalla."
+    },
+    {
+      id: "frontend", short: "Front", name: "Frontend (CSS / React)",
+      what: "Todo lo que el usuario ve y toca en el navegador.",
+      covers: "HTML, CSS, layout, React, estado, formularios, accesibilidad.",
+      forWhat: "Que la app sea clara y usable. Ojo: no es una barrera de seguridad."
+    },
+    {
+      id: "cloud", short: "Cloud", name: "Cloud e infraestructura (AWS)",
+      what: "Las máquinas, redes y servicios gestionados donde corre todo lo demás, alquilados por uso en vez de comprados. La “infraestructura” es la práctica de configurarlos y mantenerlos; aquí van juntas.",
+      covers: "Cómputo (EC2, Lambda), modelos de ejecución (serverless, edge), identidad y permisos (IAM), redes, almacenamiento, IA gestionada (Bedrock).",
+      forWhat: "Poner tu app en producción, controlar quién accede a qué y escalar sin comprar hardware."
+    },
+    {
+      id: "arquitectura", short: "Arq.", name: "Arquitectura y decisiones",
+      what: "Cómo se reparten las piezas de un sistema y cómo se decide entre alternativas que cuestan caro revertir.",
+      covers: "Compartir o separar bases de datos, cuándo sí y cuándo no una blockchain, monolito o servicios, registros de decisión (ADR), acoplamiento.",
+      forWhat: "Tomar decisiones con preguntas explícitas, dejarlas por escrito y saber cuándo revisarlas."
+    }
+  ];
+
+  const COLLECTIONS = [
+    {
+      id: "col:supabase", short: "Supabase", name: "SUPABASE DOCS",
+      what: "Los conceptos que se aprenden con la documentación de Supabase, vistos juntos. No es una capa nueva: cada tarjeta sigue viviendo en su capa y aquí solo se reúne.",
+      covers: "Políticas RLS, funciones SQL y RPC, Edge Functions y lo que las rodea. Cada tarjeta muestra a qué capa pertenece (Base de datos, Backend).",
+      forWhat: "Estudiar Supabase de punta a punta sin perder de vista en qué capa vive cada pieza y qué se necesita saber antes."
+    }
+  ];
+
+  const SRC = {
+    rls: { t: "Supabase · Row Level Security", u: "https://supabase.com/docs/guides/auth/row-level-security" },
+    efLimits: { t: "Supabase · Límites de Edge Functions", u: "https://supabase.com/docs/guides/functions/limits" },
+    efAuth: { t: "Supabase · Proteger Edge Functions", u: "https://supabase.com/docs/guides/functions/auth" },
+    ef: { t: "Supabase · Edge Functions", u: "https://supabase.com/docs/guides/functions" },
+    prod: { t: "Supabase · Production Checklist", u: "https://supabase.com/docs/guides/deployment/going-into-prod" },
+    lamQ: { t: "AWS · Cuotas de Lambda", u: "https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html" },
+    lamEnv: { t: "AWS Compute Blog · Ciclo de vida de Lambda", u: "https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/" },
+    sl: { t: "AWS · Qué es serverless", u: "https://aws.amazon.com/what-is/serverless-computing/" },
+    edge: { t: "Cloudflare · Qué es edge computing", u: "https://www.cloudflare.com/learning/serverless/what-is-edge-computing" },
+    iam: { t: "AWS IAM · Lógica de evaluación de políticas", u: "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html" },
+    nist: { t: "NIST IR 8202 · Blockchain Technology Overview", u: "https://csrc.nist.gov/pubs/ir/8202/final" },
+    smtp: { t: "RFC 5321 · SMTP", u: "https://www.rfc-editor.org/rfc/rfc5321" },
+    sub: { t: "RFC 6409 · Message Submission", u: "https://www.rfc-editor.org/rfc/rfc6409" },
+    tls: { t: "RFC 8314 · TLS para correo", u: "https://www.rfc-editor.org/rfc/rfc8314" },
+    transfer: { t: "AWS Transfer Family · Guía", u: "https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html" },
+    card: { t: "Tarjeta de Profesor GeCo", u: "" }
+  };
+
+  const QUIZ = [
+    /* ---------- RLS ---------- */
+    { id: "rls-1", c: "rls", t: "mcq",
+      q: "Activas RLS en una tabla nueva, pero todavía no creas ninguna política. Un usuario autenticado hace un SELECT. ¿Qué recibe?",
+      o: ["Todas las filas, porque tiene sesión iniciada", "Ninguna fila", "Un error de sintaxis", "Solo las filas donde user_id coincide con su id"],
+      a: 1, why: "Con RLS activado y sin políticas, el acceso se deniega por defecto para los roles sujetos a RLS. Una tabla sin RLS activado es la que queda abierta.", src: SRC.rls },
+    { id: "rls-2", c: "rls", t: "mcq",
+      q: "En una política de UPDATE, ¿para qué sirve la cláusula WITH CHECK?",
+      o: ["Para filtrar qué filas existentes puede ver el usuario", "Para validar cómo queda la fila después del cambio", "Para acelerar la consulta con un índice", "Para dar el permiso UPDATE al rol"],
+      a: 1, why: "USING selecciona las filas que ya existen; WITH CHECK valida las filas nuevas o modificadas. Sin él, un usuario podría reasignar user_id a otra persona.", src: SRC.rls },
+    { id: "rls-3", c: "rls", t: "mcq",
+      q: "En un test, tu consulta devuelve todos los datos aunque la política parece correcta. ¿Qué revisas primero?",
+      o: ["Que no estés usando el cliente con la clave service_role", "Que la tabla tenga un índice en user_id", "Que el navegador no tenga caché", "Que la política use mayúsculas"],
+      a: 0, why: "La clave service_role se salta RLS por completo. También conviene recordar que el dueño de la tabla lo salta salvo que uses FORCE ROW LEVEL SECURITY.", src: SRC.rls },
+    { id: "rls-c", c: "rls", t: "code",
+      q: "Dada la tabla public.notas (id uuid, user_id uuid, texto text), escribe el SQL para que cada usuario autenticado pueda leer, insertar y actualizar solo sus propias filas.",
+      hint: "Empieza activando RLS. Piensa qué cláusula necesita cada operación: SELECT usa USING, INSERT usa WITH CHECK, UPDATE usa las dos.",
+      sol: String.raw`alter table public.notas enable row level security;
+
+create policy "leer propias" on public.notas
+  for select to authenticated
+  using ( (select auth.uid()) = user_id );
+
+create policy "insertar propias" on public.notas
+  for insert to authenticated
+  with check ( (select auth.uid()) = user_id );
+
+create policy "actualizar propias" on public.notas
+  for update to authenticated
+  using ( (select auth.uid()) = user_id )
+  with check ( (select auth.uid()) = user_id );`,
+      checks: ["Activaste RLS con ENABLE ROW LEVEL SECURITY", "SELECT usa USING y INSERT usa WITH CHECK", "UPDATE tiene USING y WITH CHECK", "Las políticas son TO authenticated, no para anon", "Comparas contra auth.uid(), no contra un valor que manda el cliente"],
+      src: SRC.rls },
+
+    /* ---------- SECURITY DEFINER ---------- */
+    { id: "sd-1", c: "security-definer", t: "mcq",
+      q: "Una función SECURITY DEFINER la creó el rol postgres y la llama un usuario authenticated. ¿Con qué permisos se ejecuta?",
+      o: ["Los del usuario que la llama", "Los de su dueño, el rol postgres", "Los del rol anon", "Ninguno: falla siempre"],
+      a: 1, why: "SECURITY DEFINER ejecuta la función con los permisos de su dueño, no de quien la llama. Por eso puede consultar tablas que el usuario no podría leer directo.", src: SRC.card },
+    { id: "sd-2", c: "security-definer", t: "mcq",
+      q: "¿Por qué conviene fijar SET search_path en una función SECURITY DEFINER?",
+      o: ["Es obligatorio por sintaxis", "Para que sea más rápida", "Para que nadie cuele un objeto falso en otro schema que la función termine usando con permisos prestados", "Para que pueda ver todos los schemas"],
+      a: 2, why: "Sin search_path fijo, alguien podría crear una tabla o función con el mismo nombre en otro schema, y la función la usaría con los permisos de su dueño.", src: SRC.card },
+    { id: "sd-3", c: "security-definer", t: "mcq",
+      q: "Creas una función SECURITY DEFINER en el schema public y no tocas sus permisos. ¿Qué riesgo concreto tienes?",
+      o: ["Ninguno, SECURITY DEFINER la hace privada", "Que anon pueda ejecutarla con los permisos de su dueño", "Que se borre sola a los 30 días", "Que ya no pueda usarse en políticas RLS"],
+      a: 1, why: "Postgres concede EXECUTE a PUBLIC por defecto y las funciones de public se exponen como API. Hay que revocar de PUBLIC y anon, y conceder solo a quien corresponda.", src: SRC.card },
+    { id: "sd-c", c: "security-definer", t: "code",
+      q: "Escribe una función SQL is_admin(_user_id uuid) que devuelva true si el usuario está en la tabla user_roles con rol 'admin', que sea segura como SECURITY DEFINER, y quítale el permiso de ejecución a anon.",
+      hint: "Necesitas tres cosas: SECURITY DEFINER, un search_path fijo y un REVOKE seguido de un GRANT a authenticated.",
+      sol: String.raw`create function public.is_admin(_user_id uuid)
+returns boolean
+language sql stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.user_roles
+    where user_id = _user_id and role = 'admin'
+  )
+$$;
+
+revoke execute on function public.is_admin(uuid) from public, anon;
+grant  execute on function public.is_admin(uuid) to authenticated;`,
+      checks: ["Declaraste SECURITY DEFINER", "Fijaste SET search_path", "Usaste nombres calificados (public.user_roles)", "Hiciste REVOKE de PUBLIC y anon", "Concediste EXECUTE solo a authenticated"],
+      src: SRC.card },
+
+    /* ---------- RPC ---------- */
+    { id: "rpc-1", c: "rpc", t: "mcq",
+      q: "¿Qué hace supabase.rpc('cerrar_tarea', { p_id: 5 })?",
+      o: ["Cierra la conexión con la base de datos", "Llama a la función de Postgres llamada cerrar_tarea, a través de la API", "Crea una tabla llamada cerrar_tarea", "Ejecuta una Edge Function con ese nombre"],
+      a: 1, why: "RPC (en el sentido de Supabase) es llamar por nombre a una función de la base de datos. No es una Edge Function: esa se llama con functions.invoke.", src: SRC.card },
+    { id: "rpc-2", c: "rpc", t: "mcq",
+      q: "Una función en el schema public se expone como RPC. ¿Quién puede ejecutarla por defecto, si no cambias permisos?",
+      o: ["Solo el dueño", "Solo los usuarios autenticados", "Cualquiera con acceso a la API, incluido anon, porque EXECUTE va a PUBLIC", "Nadie hasta que alguien la active"],
+      a: 2, why: "Cada función expuesta es API pública. Por eso se revisa con REVOKE y GRANT, y con una consulta de auditoría.", src: SRC.card },
+    { id: "rpc-c", c: "rpc", t: "code",
+      q: "Escribe una consulta que liste las funciones SECURITY DEFINER del schema public que el rol anon puede ejecutar, mostrando nombre y dueño.",
+      hint: "Mira las tablas de catálogo pg_proc y pg_namespace, y la función has_function_privilege.",
+      sol: String.raw`select p.proname,
+       p.proowner::regrole as dueno
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and p.prosecdef
+  and has_function_privilege('anon', p.oid, 'EXECUTE');`,
+      checks: ["Filtraste por el schema public", "Usaste prosecdef para quedarte con las SECURITY DEFINER", "Usaste has_function_privilege con el rol anon", "Mostraste el dueño (proowner::regrole)"],
+      src: SRC.card },
+
+    /* ---------- Compartir BD ---------- */
+    { id: "bdc-1", c: "bd-compartida", t: "mcq",
+      q: "En el incidente del 2026-10-05, un listado de OPS saturó la base y cayeron las dos apps. ¿Qué tipo de acoplamiento fue?",
+      o: ["De datos", "De identidad", "De capacidad", "De diseño visual"],
+      a: 2, why: "Compartir una base significa compartir CPU, memoria y conexiones. Los esquemas separados ordenan, pero no aíslan la capacidad.", src: SRC.card },
+
+    /* ---------- AWS ---------- */
+    { id: "aws-1", c: "aws", t: "mcq",
+      q: "En el ARN arn:aws:ec2:sa-east-1:123456789012:instance/i-0abc, ¿qué es sa-east-1?",
+      o: ["El ID de tu cuenta", "La región (São Paulo)", "El tipo de máquina", "El servicio"],
+      a: 1, why: "El ARN lleva partición, servicio (ec2), región (sa-east-1), ID de cuenta y recurso.", src: SRC.card },
+    { id: "aws-2", c: "aws", t: "mcq",
+      q: "En el modelo de responsabilidad compartida de AWS, ¿qué cuidas tú?",
+      o: ["El hardware y el edificio del centro de datos", "Lo que pones en la nube y quién entra", "Nada, AWS lo cuida todo", "Solo la facturación"],
+      a: 1, why: "AWS cuida la infraestructura física; tú cuidas tus datos, tus permisos y tu configuración.", src: SRC.card },
+
+    /* ---------- IAM ---------- */
+    { id: "iam-1", c: "iam", t: "mcq",
+      q: "Una política permite s3:GetObject sobre un bucket y otra lo niega sobre el mismo recurso. ¿Qué pasa?",
+      o: ["Se permite, gana la más específica", "Se deniega: un deny explícito gana a cualquier allow", "Depende del orden en que se crearon", "Se permite si eres administrador"],
+      a: 1, why: "En la evaluación de IAM, un deny explícito en cualquier política anula los allow.", src: SRC.iam },
+    { id: "iam-2", c: "iam", t: "mcq",
+      q: "Un usuario nuevo no tiene ninguna política asociada. Intenta leer un bucket. ¿Resultado?",
+      o: ["Permitido, es de la misma cuenta", "Denegado: por defecto todo se deniega (deny implícito)", "Permitido solo lectura", "Depende de la región"],
+      a: 1, why: "Por defecto todas las solicitudes se deniegan. Un allow explícito en una política de identidad o de recurso es lo que las habilita.", src: SRC.iam },
+    { id: "iam-c", c: "iam", t: "code",
+      q: "Escribe una política de IAM (JSON) que permita únicamente leer objetos de la carpeta entrada/ del bucket mi-bucket.",
+      hint: "Una sola acción de S3, y el recurso es un ARN que termina en /entrada/*.",
+      sol: String.raw`{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject"],
+    "Resource": "arn:aws:s3:::mi-bucket/entrada/*"
+  }]
+}`,
+      checks: ["Effect es Allow", "La única acción es s3:GetObject", "El recurso es el ARN de la carpeta, no *", "No usaste comodines como s3:*"],
+      src: SRC.iam },
+
+    /* ---------- EC2 ---------- */
+    { id: "ec2-1", c: "ec2", t: "mcq",
+      q: "Detienes (stop) una instancia EC2 que tiene un volumen EBS. ¿Qué es cierto?",
+      o: ["Se borra todo y no cobran nada", "Dejas de pagar el cómputo, pero el volumen EBS sigue cobrando", "Sigue cobrando lo mismo que encendida", "La instancia se elimina y no se puede reiniciar"],
+      a: 1, why: "Detener una instancia pausa el cobro de cómputo; el almacenamiento EBS sigue existiendo y cobrando. Terminarla sí la elimina.", src: SRC.card },
+
+    /* ---------- Bedrock ---------- */
+    { id: "bed-1", c: "bedrock", t: "mcq",
+      q: "Una función Lambda va a llamar a un modelo de Amazon Bedrock. ¿Qué necesita para poder hacerlo?",
+      o: ["Que la cuenta root la ejecute", "Un rol de ejecución con permiso para invocar ese modelo", "Una clave pública en el código", "Nada, Bedrock es público"],
+      a: 1, why: "Todo en AWS pasa por IAM: el rol de ejecución define lo que la función puede hacer. Se le da solo el permiso necesario.", src: SRC.card },
+
+    /* ---------- SERVERLESS ---------- */
+    { id: "sl-1", c: "serverless", t: "mcq",
+      q: "¿Cuál afirmación sobre serverless es correcta?",
+      o: ["No existen servidores", "Hay servidores, pero los administra el proveedor", "Es siempre más barato que una máquina fija", "Solo sirve para sitios estáticos"],
+      a: 1, why: "El nombre confunde: sí hay servidores. Lo que cambia es que provisión, parches y escalado los gestiona el proveedor, y pagas por uso.", src: SRC.sl },
+    { id: "sl-2", c: "serverless", t: "mcq",
+      q: "Una tarea corre una vez al día y dura 20 segundos. ¿Qué opción suele costar menos?",
+      o: ["Una máquina encendida las 24 horas", "Una función serverless que se ejecuta solo cuando toca", "Dos máquinas por redundancia", "Da lo mismo"],
+      a: 1, why: "Con serverless no pagas por recursos inactivos. Para tráfico enorme y constante, la cuenta puede invertirse.", src: SRC.sl },
+    { id: "sl-c", c: "serverless", t: "code",
+      q: "Esta Edge Function cuenta visitas en una variable global y a veces devuelve números que bajan. Explica por qué y arréglala usando una función SQL de Supabase.\n\nlet visitas = 0;\nDeno.serve(() => {\n  visitas++;\n  return new Response(String(visitas));\n});",
+      hint: "No hay garantía de que dos peticiones lleguen a la misma copia de la función. El estado debe vivir fuera. ¿Qué función SQL incrementaría un contador de forma atómica?",
+      sol: String.raw`-- SQL: el estado vive en la base de datos
+create table public.contador (id int primary key, n bigint not null);
+insert into public.contador values (1, 0);
+
+create function public.incrementar_visitas()
+returns bigint
+language sql
+security invoker
+set search_path = public
+as $$
+  update public.contador set n = n + 1 where id = 1 returning n
+$$;
+
+// TypeScript: la Edge Function no guarda nada
+// (supabase = cliente creado con createClient, como en el otro desafío)
+Deno.serve(async () => {
+  const { data, error } = await supabase.rpc("incrementar_visitas");
+  if (error) return new Response("error", { status: 500 });
+  return new Response(String(data));
+});`,
+      checks: ["Entiendes que cada copia de la función tiene su propia memoria", "El contador vive en la base de datos", "El incremento es atómico (un solo UPDATE ... RETURNING)", "Revisaste quién puede ejecutar la función RPC"],
+      src: SRC.sl },
+
+    /* ---------- LAMBDA ---------- */
+    { id: "lam-1", c: "lambda", t: "mcq",
+      q: "¿Cuál es el tiempo máximo de ejecución de una invocación de Lambda estándar?",
+      o: ["30 segundos", "5 minutos", "15 minutos (900 s)", "1 hora"],
+      a: 2, why: "La cuota de timeout de una función es de 900 segundos, y no se puede aumentar. Si la tarea no cabe, se rediseña.", src: SRC.lamQ },
+    { id: "lam-2", c: "lambda", t: "mcq",
+      q: "Quieres reutilizar un cliente de base de datos entre invocaciones. ¿Dónde lo creas?",
+      o: ["Dentro del handler, en cada invocación", "Fuera del handler, en la fase de inicialización", "En el archivo de configuración", "En una variable de entorno"],
+      a: 1, why: "El código fuera del handler corre al crear el entorno y se reutiliza mientras ese entorno siga vivo. Aun así, no conviene depender de que se reutilice.", src: SRC.lamEnv },
+    { id: "lam-3", c: "lambda", t: "mcq",
+      q: "Una función Lambda recién creada falla por timeout, aunque tu código tarda unos 5 segundos. ¿Qué revisas?",
+      o: ["La región", "El timeout configurado: por defecto es de 3 segundos", "El nombre del handler", "El tamaño del bucket"],
+      a: 1, why: "El timeout por defecto de una función Lambda es de 3 segundos. Se ajusta al trabajo real.", src: SRC.lamQ },
+    { id: "lam-c", c: "lambda", t: "code",
+      q: "Escribe un handler de Lambda en Python que reciba un evento con la clave \"nombre\". Si falta, debe responder 400; si viene, responder 200 con un saludo. El saludo base debe definirse fuera del handler.",
+      hint: "Lo que va fuera del handler corre una vez por entorno. La respuesta es un diccionario con statusCode y body.",
+      sol: String.raw`import json
+
+SALUDO = "Hola"   # fuera del handler: se crea una vez por entorno
+
+def handler(event, context):
+    nombre = event.get("nombre")
+    if not nombre:
+        return {
+            "statusCode": 400,
+            "body": json.dumps({"error": "falta nombre"})
+        }
+    return {
+        "statusCode": 200,
+        "body": json.dumps({"mensaje": f"{SALUDO}, {nombre}"})
+    }`,
+      checks: ["El handler recibe (event, context)", "Validas que exista nombre y devuelves 400 si no", "Devuelves statusCode y body", "SALUDO está fuera del handler"],
+      src: SRC.lamEnv },
+
+    /* ---------- EDGE COMPUTING ---------- */
+    { id: "edg-1", c: "edge-computing", t: "mcq",
+      q: "Tu función corre en un nodo en Madrid, pero la base de datos está en São Paulo y la función hace 3 consultas por petición. ¿Qué pasa con la latencia?",
+      o: ["Mejora siempre, porque la función está cerca del usuario", "La distancia a la base de datos domina y puede empeorar", "Desaparece", "Se reparte igual entre las 3 consultas"],
+      a: 1, why: "Edge acerca el código al usuario, pero no los datos. Cada consulta paga el viaje hasta la base. Supabase permite fijar la región de invocación cerca de la base.", src: SRC.edge },
+    { id: "edg-2", c: "edge-computing", t: "mcq",
+      q: "¿Cuál es la mejor candidata para ejecutarse en el borde?",
+      o: ["Reconstruir un índice de 200 GB", "Redirigir al usuario según su país", "Entrenar un modelo", "Migrar el esquema de la base"],
+      a: 1, why: "Las tareas cortas, sin mucho estado y que no dependen de datos lejanos son las ideales para el borde.", src: SRC.edge },
+    { id: "edg-c", c: "edge-computing", t: "code",
+      q: "Escribe un handler estilo Deno.serve que redirija (302) a /es-cl si el header cf-ipcountry vale \"CL\", y a /en en cualquier otro caso. Anota en un comentario qué debes verificar sobre ese header.",
+      hint: "Response.redirect(url, 302). Ese header no es universal.",
+      sol: String.raw`Deno.serve((req) => {
+  // Ojo: cf-ipcountry lo agrega Cloudflare. Verifica si tu plataforma
+  // lo entrega (otra puede usar un header distinto) y qué valor trae
+  // cuando no puede determinar el país.
+  const pais = req.headers.get("cf-ipcountry");
+  const destino = pais === "CL" ? "/es-cl" : "/en";
+  const url = new URL(destino, req.url);
+  return Response.redirect(url.toString(), 302);
+});`,
+      checks: ["Lees el header con req.headers.get", "Redirigiste con 302", "Tienes un destino por defecto", "Anotaste que el header depende de la plataforma"],
+      src: SRC.edge },
+
+    /* ---------- SMTP ---------- */
+    { id: "smtp-1", c: "smtp", t: "mcq",
+      q: "¿Qué puerto usa una aplicación para enviar correo a un servidor SMTP con autenticación y STARTTLS?",
+      o: ["25", "587", "110", "22"],
+      a: 1, why: "El 587 es el puerto de envío (submission), definido en RFC 6409. El 25 es para transferencia entre servidores. El 465 es la opción con TLS implícito (RFC 8314).", src: SRC.sub },
+    { id: "smtp-2", c: "smtp", t: "mcq",
+      q: "Una Edge Function de Supabase no logra conectarse a smtp.proveedor.com:587. ¿Causa más probable?",
+      o: ["El proveedor está caído", "La plataforma no permite conexiones salientes a los puertos 25 y 587", "Falta un índice en la base", "El JWT venció"],
+      a: 1, why: "La documentación de límites lo dice. Alternativas: puerto 465, la API HTTP del proveedor o SMTP personalizado en Supabase Auth para los correos de autenticación.", src: SRC.efLimits },
+    { id: "smtp-3", c: "smtp", t: "mcq",
+      q: "El correo sale sin error, pero llega a spam. ¿Qué revisas primero?",
+      o: ["El puerto 25", "Los registros SPF, DKIM y DMARC del dominio", "El tamaño de la fuente", "La versión de Deno"],
+      a: 1, why: "Enviar no es entregar. La reputación y la autenticación del dominio (SPF, DKIM, DMARC) pesan mucho.", src: SRC.prod },
+    { id: "smtp-c", c: "smtp", t: "code",
+      q: "Escribe una Edge Function que envíe un correo llamando a la API HTTP de un proveedor genérico (POST https://api.proveedor.com/v1/send). La clave debe venir de un secreto del proyecto, no del código, y debes manejar el error.",
+      hint: "Deno.env.get lee secretos. El body va como JSON. Revisa res.ok.",
+      sol: String.raw`Deno.serve(async (req) => {
+  const clave = Deno.env.get("EMAIL_API_KEY");
+  if (!clave) return new Response("falta configuración", { status: 500 });
+
+  const res = await fetch("https://api.proveedor.com/v1/send", {
+    method: "POST",
+    headers: {
+      "Authorization": "Bearer " + clave,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      to: "destino@ejemplo.com",
+      subject: "Hola",
+      text: "Mensaje de prueba",
+    }),
+  });
+
+  if (!res.ok) return new Response("no se pudo enviar", { status: 502 });
+  return new Response("enviado");
+});`,
+      checks: ["La clave viene de Deno.env.get, no está escrita en el código", "Usas fetch por HTTPS, no una conexión SMTP al 587", "Revisas res.ok y devuelves un error claro", "No devuelves la clave en ninguna respuesta"],
+      src: SRC.efLimits },
+
+    /* ---------- SFTP ---------- */
+    { id: "sftp-1", c: "sftp", t: "mcq",
+      q: "¿Cuál afirmación es correcta?",
+      o: ["SFTP es FTP con una capa TLS", "SFTP funciona sobre SSH, normalmente por un solo puerto (el 22)", "SFTP y FTPS son el mismo protocolo", "SFTP no cifra el contenido"],
+      a: 1, why: "FTPS es FTP con TLS y usa varios puertos. SFTP es otro protocolo, sobre SSH, con un solo puerto. Son incompatibles entre sí.", src: SRC.transfer },
+    { id: "sftp-2", c: "sftp", t: "mcq",
+      q: "Un proveedor deja un CSV cada noche en un servidor SFTP. ¿Qué precaución es más importante al procesarlo?",
+      o: ["Que procesarlo dos veces no duplique filas, y verificar que terminó de subir", "Usar la contraseña en el código para ir más rápido", "Abrir el puerto 21", "Borrar el archivo antes de leerlo"],
+      a: 0, why: "Los archivos pueden llegar incompletos o repetidos. El procesamiento debe ser idempotente y validar el formato.", src: SRC.card },
+    { id: "sftp-c", c: "sftp", t: "code",
+      q: "Escribe los comandos para: (1) generar un par de claves ed25519, y (2) conectarte por SFTP con esa clave y descargar reporte.csv y subir respuesta.csv.",
+      hint: "ssh-keygen para el par; sftp con -i para la clave; dentro, get y put.",
+      sol: String.raw`ssh-keygen -t ed25519 -f ~/.ssh/mi_clave
+# Entregas mi_clave.pub al proveedor. mi_clave (privada) no sale de tu control.
+
+sftp -i ~/.ssh/mi_clave usuario@sftp.proveedor.com
+sftp> get reporte.csv
+sftp> put respuesta.csv
+sftp> bye`,
+      checks: ["Generaste el par con ssh-keygen", "Compartiste solo la clave pública", "Usaste sftp -i con la privada", "Usaste get y put"],
+      src: SRC.transfer },
+
+    /* ---------- EDGE FUNCTIONS SUPABASE ---------- */
+    { id: "sef-1", c: "supabase-edge-functions", t: "mcq",
+      q: "¿Sobre qué runtime corren las Edge Functions de Supabase?",
+      o: ["Node.js clásico", "Deno", "Python", "Java"],
+      a: 1, why: "Son funciones de TypeScript sobre Deno, un runtime abierto, desplegadas globalmente.", src: SRC.ef },
+    { id: "sef-2", c: "supabase-edge-functions", t: "mcq",
+      q: "Tu función recibe webhooks de Stripe, que no mandan un JWT de Supabase. ¿Qué haces?",
+      o: ["Dejas verify_jwt activo y esperas", "Desactivas verify_jwt en esa función y verificas la firma de Stripe dentro de ella", "Haces pública la clave service_role", "Cambias el webhook para que mande el JWT"],
+      a: 1, why: "Es el patrón documentado: sin JWT de usuario, el control de quién llama pasa a ser tu código, y para un webhook eso es la verificación de la firma del proveedor.", src: SRC.efAuth },
+    { id: "sef-3", c: "supabase-edge-functions", t: "mcq",
+      q: "¿Cuál es el tiempo máximo de CPU por petición en una Edge Function (sin contar la espera de entrada y salida)?",
+      o: ["200 ms", "2 segundos", "30 segundos", "15 minutos"],
+      a: 1, why: "La documentación de límites indica 2 segundos de CPU por petición y 256 MB de memoria. El tiempo total y la espera máxima de respuesta son otros límites. Verifica los vigentes, porque cambian.", src: SRC.efLimits },
+    { id: "sef-4", c: "supabase-edge-functions", t: "mcq",
+      q: "Necesitas llamar a la API de Stripe con una clave secreta. ¿Dónde conviene hacerlo?",
+      o: ["En el frontend, con la clave en una variable", "En una función SQL (RPC)", "En una Edge Function, con la clave guardada como secreto del proyecto", "En una política RLS"],
+      a: 2, why: "Una Edge Function corre en el servidor, puede llamar a terceros con fetch y guarda secretos fuera del código. El frontend expone lo que contiene.", src: SRC.ef },
+    { id: "sef-c", c: "supabase-edge-functions", t: "code",
+      q: "Escribe una Edge Function que acepte solo POST, cree un cliente de Supabase con el JWT del usuario que llama (para que RLS aplique) y devuelva sus filas de la tabla notas.",
+      hint: "createClient recibe la URL y la clave pública desde variables de entorno, y las cabeceras globales llevan el Authorization de la petición.",
+      sol: String.raw`import { createClient } from "npm:@supabase/supabase-js@2";
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response("método no permitido", { status: 405 });
+  }
+
+  const supabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_ANON_KEY")!,
+    { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
+  );
+
+  const { data, error } = await supabase.from("notas").select("*");
+  if (error) return new Response("error", { status: 500 });
+
+  return new Response(JSON.stringify(data), {
+    headers: { "Content-Type": "application/json" },
+  });
+});`,
+      checks: ["Rechazas métodos distintos de POST", "Usas la clave anon y el JWT del usuario, no service_role", "Las claves vienen de Deno.env.get", "RLS aplica porque la consulta corre como el usuario", "Manejas el error"],
+      src: SRC.efAuth },
+
+    /* ---------- BLOCKCHAIN ---------- */
+    { id: "bc-1", c: "blockchain", t: "mcq",
+      q: "¿Qué hace detectable la alteración de un bloque antiguo?",
+      o: ["Que está guardado en la nube", "Que cada bloque incluye el hash del anterior, así que cambiarlo rompe la cadena siguiente", "Que se cifra con contraseña", "Que solo el administrador puede leerlo"],
+      a: 1, why: "NIST describe la blockchain como un registro resistente a manipulaciones y con evidencia de alteración, gracias a los hashes encadenados y al consenso.", src: SRC.nist },
+    { id: "bc-2", c: "blockchain", t: "mcq",
+      q: "Una sola empresa controla los datos, hay un administrador de confianza y la ley exige poder borrar datos personales. ¿Qué eliges?",
+      o: ["Una blockchain pública", "Una base de datos normal con auditoría y respaldos", "Una blockchain con permisos", "Un archivo en un correo"],
+      a: 1, why: "Cuando hay un tercero de confianza y se necesita corregir o borrar, una base de datos como Postgres es más simple, rápida y adecuada.", src: SRC.nist },
+    { id: "bc-c", c: "blockchain", t: "code",
+      q: "En JavaScript (Node), escribe una función crearBloque(previo, datos) que devuelva un objeto con datos, hashPrevio y hash (SHA-256 de hashPrevio + datos), y una función verificar(cadena) que devuelva false si alguna cadena está alterada.",
+      hint: "crypto.createHash('sha256').update(texto).digest('hex'). Para verificar, recalcula el hash de cada bloque y compara con el hashPrevio del siguiente.",
+      sol: String.raw`const crypto = require("crypto");
+
+const sha = (t) => crypto.createHash("sha256").update(t).digest("hex");
+
+function crearBloque(previo, datos) {
+  const hashPrevio = previo ? previo.hash : "0";
+  return { datos, hashPrevio, hash: sha(hashPrevio + datos) };
+}
+
+function verificar(cadena) {
+  for (let i = 0; i < cadena.length; i++) {
+    const b = cadena[i];
+    if (b.hash !== sha(b.hashPrevio + b.datos)) return false;
+    if (i > 0 && b.hashPrevio !== cadena[i - 1].hash) return false;
+  }
+  return true;
+}`,
+      checks: ["Cada bloque guarda el hash del anterior", "El hash depende de hashPrevio y de los datos", "verificar recalcula cada hash", "verificar compara hashPrevio con el hash del bloque anterior"],
+      src: SRC.nist }
+  ];
+
+  const ROADMAP = [
+    { term: "Webhooks y verificación de firmas", layer: "Backend", connects: ["supabase-edge-functions", "lambda"], requires: ["supabase-edge-functions"],
+      why: "Ya viste que un webhook es el caso típico de verify_jwt = false. Falta entender cómo se comprueba que quien llama es quien dice ser." },
+    { term: "JWT: qué lleva y cómo se verifica", layer: "Backend", connects: ["supabase-edge-functions", "rls", "rpc"], requires: [],
+      why: "RLS usa auth.uid() y las Edge Functions usan verify_jwt. Ambos descansan en lo mismo y todavía no tiene tarjeta propia." },
+    { term: "CORS", layer: "Backend", connects: ["supabase-edge-functions"], requires: ["supabase-edge-functions"],
+      why: "Es lo que hace fallar a una Edge Function llamada desde el navegador, y un * en producción abre una puerta." },
+    { term: "Secretos y variables de entorno", layer: "Backend", connects: ["supabase-edge-functions", "lambda", "smtp", "sftp", "bedrock"], requires: [],
+      why: "Aparece en casi todas las tarjetas nuevas: claves de correo, de SFTP, de APIs. Un lugar único para el criterio ahorra errores." },
+    { term: "SPF, DKIM y DMARC", layer: "Backend", connects: ["smtp"], requires: ["smtp"],
+      why: "Es la diferencia entre un correo enviado y un correo entregado." },
+    { term: "S3 y URLs prefirmadas", layer: "Cloud", connects: ["aws", "iam", "lambda", "sftp"], requires: ["aws", "iam"],
+      why: "S3 es el destino de los archivos de SFTP en AWS y el disparador clásico de Lambda." },
+    { term: "API Gateway y EventBridge: qué dispara una Lambda", layer: "Cloud", connects: ["lambda", "serverless"], requires: ["lambda"],
+      why: "Una Lambda sin disparador no hace nada. Esta tarjeta cierra el círculo." },
+    { term: "Idempotencia y reintentos", layer: "Arquitectura", connects: ["lambda", "smtp", "sftp"], requires: [],
+      why: "Aparece en las trampas de Lambda, SFTP y correo. Es una de las ideas más rentables para sistemas que fallan." },
+    { term: "Índices y EXPLAIN en Postgres", layer: "Base de datos", connects: ["bd-compartida", "rls"], requires: [],
+      why: "El incidente de los 85 MB por request es un problema de este tipo, y las políticas RLS mal escritas lo agravan." },
+    { term: "pg_cron y pg_net", layer: "Base de datos", connects: ["supabase-edge-functions", "rpc"], requires: ["supabase-edge-functions"],
+      why: "Permiten programar tareas y llamar a una Edge Function desde la base de datos." },
+    { term: "Supabase Storage y políticas sobre storage.objects", layer: "Base de datos", connects: ["rls", "sftp"], requires: ["rls"],
+      why: "Los archivos también se protegen con RLS, y es donde mucha gente se equivoca." },
+    { term: "CDN y caché", layer: "Cloud", connects: ["edge-computing"], requires: ["edge-computing"],
+      why: "Es el uso más extendido del borde y la forma más simple de bajar la latencia." },
+    { term: "Migraciones de base de datos", layer: "Base de datos", connects: ["security-definer", "bd-compartida"], requires: [],
+      why: "Ya mencionas migraciones al hablar de dueño de funciones y de esquemas. Falta la tarjeta que ordene el tema." }
+  ];
+
+  const STORAGE_KEY = "profesor-geco-state-v2";
+  const OLD_KEY = "profesor-geco-state-v1";
+  const PILLS = { allow: "permite", deny: "restringe", info: "ejemplo", bad: "evitar" };
+  const TAG_LABELS = { seguridad: "Seguridad", "decisión": "Decisión" };
+
+  function byOrder(a, b) { return a.order - b.order; }
+  function catById(id) { return CATEGORIES.concat(COLLECTIONS).filter(function (c) { return c.id === id; })[0]; }
+  function isCol(id) { return typeof id === "string" && id.indexOf("col:") === 0; }
+  function layerIdx(id) { for (let i = 0; i < CATEGORIES.length; i++) { if (CATEGORIES[i].id === id) return i; } return 99; }
+  function cardsOf(gid) {
+    if (isCol(gid)) {
+      return CARDS.filter(function (c) { return (c.collections || []).indexOf(gid) !== -1; })
+        .sort(function (a, b) { return layerIdx(a.category) - layerIdx(b.category) || a.order - b.order; });
+    }
+    return CARDS.filter(function (c) { return c.category === gid; }).sort(byOrder);
+  }
+  function cardById(id) { return CARDS.filter(function (c) { return c.id === id; })[0]; }
+  function deckList() { return cardsOf(state.cat); }
+
+  let state = { view: "index", cat: null, index: 0, status: {}, quiz: {}, daily: null, hist: {} };
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+    if (saved && typeof saved === "object") {
+      if (saved.status && typeof saved.status === "object") state.status = saved.status;
+      if (saved.quiz && typeof saved.quiz === "object") state.quiz = saved.quiz;
+      if (saved.daily && typeof saved.daily === "object") state.daily = saved.daily;
+      if (saved.hist && typeof saved.hist === "object") state.hist = saved.hist;
+      if (saved.view === "deck" && catById(saved.cat)) {
+        state.view = "deck";
+        state.cat = saved.cat;
+        if (Number.isInteger(saved.index) && saved.index >= 0) state.index = saved.index;
+      }
+    } else {
+      const old = JSON.parse(localStorage.getItem(OLD_KEY) || "null");
+      if (old && old.status && typeof old.status === "object") state.status = old.status;
+    }
+  } catch (e) {}
+
+  function persist() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    try { syncRemote(); } catch (e) {}
+  }
+
+  /* ===== Copia del progreso en la base del artefacto =====
+     localStorage sigue siendo la fuente local. Si la base no está
+     disponible (claude.use("db") devuelve null), nada de esto corre. */
+  const REMOTE_DOC = "progress/main";
+  const FATAL_CODES = ["invalid_argument", "quota_exceeded", "revoked", "not_granted", "capability_disabled", "capability_removed", "transform_error"];
+  const remote = { db: null, ready: false, blocked: false, lastSig: null, writing: false, again: false, retried: false };
+
+  function progressSig() {
+    return JSON.stringify({ status: state.status, quiz: state.quiz, hist: state.hist });
+  }
+
+  function syncRemote() {
+    if (!remote.ready || !remote.db || remote.blocked) return;
+    const sig = progressSig();
+    if (sig === remote.lastSig) return;
+    if (remote.writing) { remote.again = true; return; }
+    remote.writing = true;
+    const body = JSON.parse(sig);
+    body.updatedAt = new Date().toISOString();
+    let ref;
+    try { ref = remote.db.doc(REMOTE_DOC); } catch (e) { remote.blocked = true; remote.writing = false; return; }
+    ref.set(body).then(function () {
+      remote.lastSig = sig;
+      remote.retried = false;
+    }, function (e) {
+      const code = e && e.code;
+      if (FATAL_CODES.indexOf(code) !== -1) { remote.blocked = true; return; }
+      if (!remote.retried) {
+        remote.retried = true;
+        setTimeout(function () { try { syncRemote(); } catch (x) {} }, 1500 + Math.floor(Math.random() * 1500));
+      }
+    }).then(function () {
+      remote.writing = false;
+      if (remote.again) { remote.again = false; syncRemote(); }
+    });
+  }
+
+  function mergeRemote(data) {
+    let changed = false;
+    if (data.status && typeof data.status === "object") {
+      Object.keys(data.status).forEach(function (k) {
+        const v = data.status[k];
+        if (!state.status[k] && (v === "known" || v === "review")) { state.status[k] = v; changed = true; }
+      });
+    }
+    if (data.quiz && typeof data.quiz === "object") {
+      Object.keys(data.quiz).forEach(function (k) {
+        const r = data.quiz[k], l = state.quiz[k];
+        if (r && typeof r === "object" && typeof r.seen === "number" && (!l || r.seen > (l.seen || 0))) {
+          state.quiz[k] = { box: r.box || 0, due: r.due || null, seen: r.seen, ok: r.ok || 0 };
+          changed = true;
+        }
+      });
+    }
+    if (data.hist && typeof data.hist === "object") {
+      Object.keys(data.hist).forEach(function (k) {
+        if (!state.hist[k] && data.hist[k] && typeof data.hist[k] === "object") { state.hist[k] = data.hist[k]; changed = true; }
+      });
+    }
+    return changed;
+  }
+
+  function initRemote() {
+    const c = window.claude;
+    if (!c || typeof c.use !== "function") return;
+    Promise.all([
+      Promise.resolve(c.use("db")).catch(function () { return null; }),
+      Promise.resolve(c.use("user")).catch(function () { return null; })
+    ]).then(function (res) {
+      const db = res[0], user = res[1];
+      if (!db) return;
+      remote.db = db;
+      const canWrite = user && typeof user.can === "function"
+        ? Promise.resolve(user.can("data.write")).catch(function () { return null; })
+        : Promise.resolve(null);
+      return canWrite.then(function (cw) {
+        if (cw === false) remote.blocked = true;
+        return db.doc(REMOTE_DOC).get();
+      }).then(function (snap) {
+        if (snap && snap.exists) {
+          const data = snap.data() || {};
+          remote.lastSig = JSON.stringify({ status: data.status || {}, quiz: data.quiz || {}, hist: data.hist || {} });
+          if (mergeRemote(data)) {
+            try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+            render();
+          }
+        } else {
+          // Sin documento aún: se crea con el primer cambio real de progreso.
+          remote.lastSig = progressSig();
+        }
+      }, function (e) {
+        const code = e && e.code;
+        if (FATAL_CODES.indexOf(code) !== -1 && code !== "invalid_argument") remote.blocked = true;
+      }).then(function () {
+        remote.ready = true;
+      });
+    }).catch(function () {});
+  }
+
+  let flipped = false;
+  let level = 0;
+  let seenLevels = {};
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const stageEl = document.getElementById("stage");
+  const progressText = document.getElementById("progressText");
+  const masteredText = document.getElementById("masteredText");
+  const dotTrack = document.getElementById("dotTrack");
+  const deckChips = document.getElementById("deckChips");
+  const navControls = document.getElementById("navControls");
+  const reviewControls = document.getElementById("reviewControls");
+  const prevBtn = document.getElementById("prevBtn");
+  const nextBtn = document.getElementById("nextBtn");
+  const flipBtn = document.getElementById("flipBtn");
+  const knowItBtn = document.getElementById("knowItBtn");
+  const reviewLaterBtn = document.getElementById("reviewLaterBtn");
+  const indexView = document.getElementById("indexView");
+  const deckView = document.getElementById("deckView");
+  const backBtn = document.getElementById("backBtn");
+
+  function escapeHtml(str) {
+    return str.replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  const LEVELS = [
+    { short: "1 · Niño", name: "Nivel 1 · Como si tuviera 8 años" },
+    { short: "2 · Adulto", name: "Nivel 2 · Concepto real, sin tecnicismos" },
+    { short: "3 · SWE", name: "Nivel 3 · Como SWE profesional" },
+    { short: "4 · Senior", name: "Nivel 4 · Senior: trampas y práctica" }
+  ];
+
+  function renderFront(card) {
+    const reqs = (card.requires || []).map(cardById).filter(Boolean);
+    const tags = (card.tags || []).map(function (t) {
+      return '<span class="tag">' + escapeHtml(TAG_LABELS[t] || t) + '</span>';
+    }).concat((card.collections || []).map(function (g) {
+      return '<span class="tag tag-col">' + escapeHtml(catById(g).name) + '</span>';
+    })).join("");
+    stageEl.innerHTML =
+      '<div class="eyebrow">' + eyebrowText(card) + '</div>' +
+      '<div class="term">' + escapeHtml(card.term) + '</div>' +
+      (tags ? '<div class="tags">' + tags + '</div>' : '') +
+      (card.bullets && card.bullets.length ? '<ul class="front-bullets">' + card.bullets.map(function (b) { return '<li>' + b + '</li>'; }).join("") + '</ul>' : '') +
+      (reqs.length ? '<div class="requires"><strong>Antes conviene ver</strong> ' + reqs.map(function (r) { return escapeHtml(r.term); }).join(" · ") + '</div>' : '') +
+      '<p class="front-hint">Toca “Dar vuelta” (o la barra espaciadora) para subir por 4 niveles: niño, adulto, SWE profesional y senior.</p>';
+  }
+
+  function eyebrowText(card) {
+    const layer = catById(card.category).name;
+    if (isCol(state.cat)) return escapeHtml(catById(state.cat).name) + ' · <span class="layer-badge">Capa: ' + escapeHtml(layer) + '</span> · ' + escapeHtml(card.topic);
+    return escapeHtml(layer) + ' · ' + escapeHtml(card.topic);
+  }
+
+  function levelBody(card, lv) {
+    if (lv === 0) return '<p class="analogy">' + (card.kid || '') + '</p>';
+    if (lv === 1) return '<p class="analogy">' + card.analogy + '</p>';
+    if (lv === 2) {
+      const ex = card.examples.map(function (e) {
+        return '' +
+          '<div class="example">' +
+          '<div class="example-title">' + escapeHtml(e.label) + '</div>' +
+          '<span class="pill ' + e.verdict + '">' + (PILLS[e.verdict] || "ejemplo") + '</span>' +
+          '<pre class="code">' + escapeHtml(e.code) + '</pre>' +
+          '<p class="example-note">' + e.note + '</p>' +
+          '</div>';
+      }).join("");
+      return ex + '<div class="back-block"><div class="back-label">Por qué importa</div><p class="why">' + card.why + '</p></div>';
+    }
+    const sr = card.senior || { pitfalls: [], practice: [] };
+    return '' +
+      '<div class="back-block"><div class="back-label">Trampas y trade-offs</div><ul class="plain">' +
+      sr.pitfalls.map(function (t) { return '<li>' + t + '</li>'; }).join("") +
+      '</ul></div>' +
+      '<div class="practice"><div class="back-label">Cómo practicarlo</div><ol>' +
+      sr.practice.map(function (t) { return '<li>' + t + '</li>'; }).join("") +
+      '</ol></div>';
+  }
+
+  function renderBack(card) {
+    seenLevels[card.id] = seenLevels[card.id] || {};
+    seenLevels[card.id][level] = true;
+    const tabs = LEVELS.map(function (l, i) {
+      const cls = ["level-tab", i === level ? "active" : "", seenLevels[card.id][i] && i !== level ? "seen" : ""].filter(Boolean).join(" ");
+      return '<button type="button" class="' + cls + '" data-level="' + i + '">' + l.short + '</button>';
+    }).join("");
+    const next = level < LEVELS.length - 1
+      ? '<button type="button" class="level-next" data-level="' + (level + 1) + '">Subir de nivel &rarr;</button>'
+      : '';
+    stageEl.innerHTML =
+      '<div class="eyebrow">' + eyebrowText(card) + '</div>' +
+      '<div class="term" style="font-size:clamp(19px,3.4vw,26px)">' + escapeHtml(card.term) + '</div>' +
+      '<div class="levels">' + tabs + '</div>' +
+      '<div class="level-title">' + LEVELS[level].name + '</div>' +
+      '<div class="level-body">' + levelBody(card, level) + '</div>' +
+      next;
+    Array.from(stageEl.querySelectorAll("[data-level]")).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        level = parseInt(btn.getAttribute("data-level"), 10);
+        render();
+      });
+    });
+  }
+
+  function layerSummary(cards) {
+    const counts = {};
+    cards.forEach(function (c) { counts[c.category] = (counts[c.category] || 0) + 1; });
+    return CATEGORIES.filter(function (c) { return counts[c.id]; }).map(function (c) { return escapeHtml(c.name.split(" (")[0]) + ': ' + counts[c.id]; }).join(" · ");
+  }
+
+  function renderIndex() {
+    const items = COLLECTIONS.concat(CATEGORIES).map(function (cat) {
+      const cards = cardsOf(cat.id);
+      const k = cards.filter(function (c) { return state.status[c.id] === "known"; }).length;
+      const empty = cards.length === 0;
+      const topics = [];
+      cards.forEach(function (c) { if (topics.indexOf(c.topic) === -1) topics.push(c.topic); });
+      const count = empty ? "próximamente" : cards.length + " concepto" + (cards.length === 1 ? "" : "s") + " · " + k + " dominado" + (k === 1 ? "" : "s");
+      return '' +
+        '<article class="cat' + (empty ? ' empty' : '') + (isCol(cat.id) ? ' cat-col' : '') + '">' +
+        '<div class="cat-head"><h2 class="cat-name">' + escapeHtml(cat.name) + '</h2><span class="cat-count">' + count + '</span></div>' +
+        '<p class="cat-line"><strong>Qué es</strong>' + escapeHtml(cat.what) + '</p>' +
+        '<p class="cat-line"><strong>Abarca</strong>' + escapeHtml(cat.covers) + '</p>' +
+        '<p class="cat-line"><strong>Sirve para</strong>' + escapeHtml(cat.forWhat) + '</p>' +
+        (isCol(cat.id) ? '<p class="cat-line"><strong>Por capa</strong>' + layerSummary(cards) + '</p>' : '') +
+        (empty ? '' :
+          '<div class="cat-topics">' + topics.map(function (t) { return '<span class="chip-static">' + escapeHtml(t) + '</span>'; }).join("") + '</div>' +
+          '<button type="button" class="primary cat-enter" data-cat="' + cat.id + '">Entrar &rarr;</button>') +
+        '</article>';
+    }).join("");
+    indexView.innerHTML =
+      renderPracticePanel() +
+      '<p class="index-intro">Elige una categoría. Cada una agrupa conceptos de una misma capa, ordenados de lo básico a lo que depende de ello, para que no se mezclen temas. SUPABASE DOCS es una colección transversal: reúne tarjetas de varias capas y te dice a cuál pertenece cada una.</p>' +
+      '<div class="cat-grid">' + items + '</div>' +
+      renderRecommender();
+    const gp = document.getElementById("goPractice");
+    if (gp) gp.addEventListener("click", function () { startPractice("daily"); });
+    Array.from(indexView.querySelectorAll(".rec-copy")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        const t = b.getAttribute("data-ask");
+        const done = function () { b.textContent = "Copiado"; };
+        try { navigator.clipboard.writeText(t).then(done, function () { b.textContent = t; }); } catch (e) { b.textContent = t; }
+      });
+    });
+    Array.from(indexView.querySelectorAll(".cat-enter")).forEach(function (btn) {
+      btn.addEventListener("click", function () { openCat(btn.getAttribute("data-cat")); });
+    });
+  }
+
+  function renderHeader() {
+    const inDeck = state.view === "deck";
+    const list = inDeck ? deckList() : CARDS;
+    const knownCount = list.filter(function (c) { return state.status[c.id] === "known"; }).length;
+    progressText.textContent = inDeck
+      ? catById(state.cat).name + " · " + (state.index + 1) + " / " + list.length
+      : CARDS.length + " conceptos";
+    masteredText.innerHTML = "<strong>" + knownCount + "</strong> dominado" + (knownCount === 1 ? "" : "s");
+
+    dotTrack.innerHTML = list.map(function (c, i) {
+      const cls = [state.status[c.id] === "known" ? "known" : "", state.status[c.id] === "review" ? "review" : "", inDeck && i === state.index ? "current" : ""].filter(Boolean).join(" ");
+      return '<span class="' + cls + '"></span>';
+    }).join("");
+
+    if (!inDeck) return;
+
+    deckChips.innerHTML = list.map(function (c, i) {
+      const cls = ["chip", state.status[c.id] === "known" ? "known" : "", state.status[c.id] === "review" ? "review" : "", i === state.index ? "active" : ""].filter(Boolean).join(" ");
+      return '<button type="button" class="' + cls + '" data-index="' + i + '" title="' + escapeHtml(c.term) + '">' + (isCol(state.cat) ? escapeHtml(catById(c.category).short) + ' · ' : '') + escapeHtml(c.term) + '</button>';
+    }).join("");
+    Array.from(deckChips.querySelectorAll("[data-index]")).forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        state.index = parseInt(btn.getAttribute("data-index"), 10);
+        flipped = false;
+        level = 0;
+        persist();
+        render();
+      });
+    });
+    prevBtn.disabled = state.index === 0;
+    nextBtn.disabled = state.index === list.length - 1;
+  }
+
+  function render() {
+    if (state.view === "deck" && !deckList().length) state.view = "index";
+    indexView.hidden = state.view !== "index";
+    deckView.hidden = state.view !== "deck";
+    practiceView.hidden = state.view !== "practice";
+    if (state.view === "practice") {
+      renderPractice();
+      renderHeader();
+      return;
+    }
+    if (state.view === "index") {
+      renderIndex();
+      renderHeader();
+      return;
+    }
+    const list = deckList();
+    if (state.index >= list.length) state.index = list.length - 1;
+    const card = list[state.index];
+    if (flipped) { renderBack(card); } else { renderFront(card); }
+    reviewControls.hidden = !flipped;
+    flipBtn.textContent = flipped ? "Ver de nuevo el término" : "Dar vuelta";
+    renderHeader();
+  }
+
+  function openCat(id) {
+    state.view = "deck";
+    state.cat = id;
+    state.index = 0;
+    flipped = false;
+    level = 0;
+    persist();
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function flip() {
+    const run = function () { flipped = !flipped; if (flipped) level = 0; render(); };
+    if (reducedMotion) { run(); return; }
+    stageEl.classList.add("turning");
+    setTimeout(function () {
+      run();
+      stageEl.classList.remove("turning");
+    }, 160);
+  }
+
+  function go(delta) {
+    const next = state.index + delta;
+    if (next < 0 || next >= deckList().length) return;
+    state.index = next;
+    flipped = false;
+    level = 0;
+    persist();
+    render();
+  }
+
+  function markStatus(status) {
+    const card = deckList()[state.index];
+    state.status[card.id] = status;
+    persist();
+    if (state.index < deckList().length - 1) { go(1); } else { render(); }
+  }
+
+  backBtn.addEventListener("click", function () {
+    state.view = "index";
+    flipped = false;
+    level = 0;
+    persist();
+    render();
+  });
+  prevBtn.addEventListener("click", function () { go(-1); });
+  nextBtn.addEventListener("click", function () { go(1); });
+  flipBtn.addEventListener("click", flip);
+  knowItBtn.addEventListener("click", function () { markStatus("known"); });
+  reviewLaterBtn.addEventListener("click", function () { markStatus("review"); });
+
+  document.addEventListener("keydown", function (e) {
+    if (state.view !== "deck") return;
+    if (document.activeElement && document.activeElement.tagName === "BUTTON" && e.key !== " ") return;
+    if (e.key === "ArrowLeft") { go(-1); }
+    else if (e.key === "ArrowRight") { go(1); }
+    else if (e.key === " " || e.key === "Enter") {
+      if (document.activeElement && document.activeElement.tagName === "BUTTON" && document.activeElement !== flipBtn) return;
+      e.preventDefault();
+      flip();
+    }
+  });
+
+  /* ===== PRÁCTICA DEL DÍA + RECOMENDADOR ===== */
+  const INTERVALS = [1, 2, 4, 8, 16, 32];
+  const practiceView = document.getElementById("practiceView");
+  let session = null; // { kind, ids, res }
+
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function fmtDate(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function todayStr() { return fmtDate(new Date()); }
+  function addDays(str, n) { const p = str.split("-"); return fmtDate(new Date(+p[0], +p[1] - 1, +p[2] + n)); }
+  function daysBetween(a, b) {
+    const pa = a.split("-"), pb = b.split("-");
+    return Math.round((new Date(+pb[0], +pb[1] - 1, +pb[2]) - new Date(+pa[0], +pa[1] - 1, +pa[2])) / 86400000);
+  }
+  function hashStr(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return Math.abs(h); }
+  function qById(id) { return QUIZ.filter(function (q) { return q.id === id; })[0]; }
+  function fmtText(s) { return escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\n/g, "<br>"); }
+
+  function qScore(q, today, salt) {
+    const s = state.quiz[q.id];
+    let pts = 0;
+    if (!s || !s.due) pts += 1;
+    else if (s.due <= today) pts += 2 + Math.min(5, daysBetween(s.due, today));
+    else pts -= 3;
+    if (state.status[q.c] === "review") pts += 2;
+    return pts + (hashStr(salt + q.id) % 1000) / 10000;
+  }
+
+  function pickSet(today, salt, onlyConcept) {
+    const pool = QUIZ.filter(function (q) { return !onlyConcept || q.c === onlyConcept; });
+    const byScore = function (a, b) { return qScore(b, today, salt) - qScore(a, today, salt); };
+    const mcq = pool.filter(function (q) { return q.t === "mcq"; }).sort(byScore);
+    const code = pool.filter(function (q) { return q.t === "code"; }).sort(byScore);
+    const set = [], used = {};
+    function take(list) {
+      for (let i = 0; i < list.length; i++) {
+        if (!used[list[i].c] && set.indexOf(list[i]) === -1) { used[list[i].c] = 1; set.push(list[i]); return; }
+      }
+      for (let j = 0; j < list.length; j++) {
+        if (set.indexOf(list[j]) === -1) { set.push(list[j]); return; }
+      }
+    }
+    if (onlyConcept) {
+      mcq.slice(0, 2).forEach(function (q) { set.push(q); });
+      if (code.length) set.push(code[0]);
+    } else {
+      take(mcq); take(mcq); take(code);
+    }
+    return set.map(function (q) { return q.id; });
+  }
+
+  function startPractice(kind, concept) {
+    const today = todayStr();
+    if (kind === "daily") {
+      if (!state.daily || state.daily.date !== today) {
+        state.daily = { date: today, ids: pickSet(today, today, null), res: {} };
+      }
+      session = { kind: "daily", ids: state.daily.ids, res: state.daily.res, title: "Práctica del día" };
+    } else if (kind === "concept") {
+      session = { kind: "concept", ids: pickSet(today, today + concept + Date.now(), concept), res: {}, title: "Práctica · " + cardById(concept).term };
+    } else {
+      session = { kind: "extra", ids: pickSet(today, today + "x" + Date.now(), null), res: {}, title: "Otra tanda" };
+    }
+    state.view = "practice";
+    persist();
+    render();
+    window.scrollTo(0, 0);
+  }
+
+  function record(q, ok) {
+    const today = todayStr();
+    const s = state.quiz[q.id] || { box: 0, due: null, seen: 0, ok: 0 };
+    s.seen += 1;
+    if (ok) { s.ok += 1; s.box = Math.min(5, s.due ? s.box + 1 : 1); } else { s.box = 0; }
+    s.due = addDays(today, INTERVALS[s.box]);
+    state.quiz[q.id] = s;
+    session.res[q.id] = ok ? "ok" : "ko";
+    if (session.kind === "daily" && state.daily) {
+      state.daily.res = session.res;
+      const done = session.ids.filter(function (id) { return session.res[id]; });
+      if (done.length === session.ids.length) {
+        state.hist[state.daily.date] = { ok: done.filter(function (id) { return session.res[id] === "ok"; }).length, total: session.ids.length };
+      }
+    }
+    persist();
+  }
+
+  function shuffledOptions(q) {
+    const idx = q.o.map(function (_, i) { return i; });
+    idx.sort(function (a, b) { return hashStr(q.id + a) - hashStr(q.id + b); });
+    return idx;
+  }
+
+  function srcHtml(q) {
+    if (!q.src) return "";
+    return '<div class="pq-src">Fuente: ' + (q.src.u ? '<a href="' + q.src.u + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(q.src.t) + '</a>' : escapeHtml(q.src.t)) + '</div>';
+  }
+
+  function questionHtml(q, n) {
+    const card = cardById(q.c);
+    const res = session.res[q.id];
+    const head = '<div class="pq-head"><span class="pq-n">' + (q.t === "code" ? "Desafío" : "Pregunta " + n) + '</span><span class="pq-topic">' + escapeHtml(card ? card.term : q.c) + '</span></div>';
+    if (q.t === "mcq") {
+      const order = shuffledOptions(q);
+      const opts = order.map(function (i) {
+        let cls = "opt";
+        if (res) { if (i === q.a) cls += " right"; else if (res === "ko" && session.pick && session.pick[q.id] === i) cls += " wrong"; }
+        return '<button type="button" class="' + cls + '" data-q="' + q.id + '" data-i="' + i + '"' + (res ? " disabled" : "") + '>' + escapeHtml(q.o[i]) + '</button>';
+      }).join("");
+      return '<section class="pq" data-id="' + q.id + '">' + head +
+        '<p class="pq-q">' + fmtText(q.q) + '</p><div class="opts">' + opts + '</div>' +
+        (res ? '<div class="pq-why"><strong>' + (res === "ok" ? "Correcto. " : "Respuesta correcta: " + escapeHtml(q.o[q.a]) + ". ") + '</strong>' + escapeHtml(q.why) + srcHtml(q) + '</div>' : "") +
+        '</section>';
+    }
+    const shown = session.shown && session.shown[q.id];
+    const hint = session.hint && session.hint[q.id];
+    const checks = (q.checks || []).map(function (c) { return '<li>' + escapeHtml(c) + '</li>'; }).join("");
+    return '<section class="pq" data-id="' + q.id + '">' + head +
+      '<p class="pq-q">' + fmtText(q.q) + '</p>' +
+      '<textarea class="pq-area" rows="6" spellcheck="false" placeholder="Escribe tu intento aquí. No se guarda ni se ejecuta; es para que pienses antes de mirar la solución."></textarea>' +
+      '<div class="pq-actions">' +
+      '<button type="button" data-act="hint" data-q="' + q.id + '">' + (hint ? "Ocultar pista" : "Ver pista") + '</button>' +
+      '<button type="button" data-act="sol" data-q="' + q.id + '">' + (shown ? "Ocultar solución" : "Ver solución") + '</button></div>' +
+      (hint ? '<p class="pq-hint"><strong>Pista.</strong> ' + escapeHtml(q.hint) + '</p>' : "") +
+      (shown ? '<div class="pq-sol"><div class="back-label">Una solución posible</div><pre class="code">' + escapeHtml(q.sol) + '</pre><div class="back-label">Compara con tu intento</div><ul class="plain">' + checks + '</ul>' + srcHtml(q) + '</div>' : "") +
+      (shown && !res ? '<div class="pq-actions"><button type="button" class="ghost-deny" data-act="ko" data-q="' + q.id + '">Aún no me sale</button><button type="button" class="ghost-allow" data-act="ok" data-q="' + q.id + '">Lo resolví</button></div>' : "") +
+      (res ? '<p class="pq-done">' + (res === "ok" ? "Anotado como resuelto. Volverá más adelante." : "Anotado para repasar. Volverá mañana.") + '</p>' : "") +
+      '</section>';
+  }
+
+  function renderPractice() {
+    if (!session) { startPractice("daily"); return; }
+    const ids = session.ids;
+    const total = ids.length;
+    const done = ids.filter(function (id) { return session.res[id]; });
+    const okN = done.filter(function (id) { return session.res[id] === "ok"; }).length;
+    session.pick = session.pick || {}; session.shown = session.shown || {}; session.hint = session.hint || {};
+    let n = 0;
+    const body = ids.map(function (id) {
+      const q = qById(id);
+      if (q.t === "mcq") n += 1;
+      return questionHtml(q, n);
+    }).join("");
+    const concepts = [];
+    ids.forEach(function (id) { const c = cardById(qById(id).c); if (c && concepts.indexOf(c.term) === -1) concepts.push(c.term); });
+    const finished = total > 0 && done.length === total;
+    practiceView.innerHTML =
+      '<div class="deck-top"><button id="pBack" type="button">&larr; Índice</button></div>' +
+      '<div class="panel">' +
+      '<div class="eyebrow">' + escapeHtml(session.title) + (session.kind === "daily" ? " · " + escapeHtml(todayStr()) : "") + '</div>' +
+      '<h2 class="panel-title">' + (total ? total + " ejercicios, " + concepts.length + (concepts.length === 1 ? " tema" : " temas") : "Sin ejercicios para este concepto todavía") + '</h2>' +
+      (concepts.length ? '<p class="panel-sub">Hoy mezclas: ' + concepts.map(escapeHtml).join(" · ") + '</p>' : '<p class="panel-sub">Este concepto aún no tiene preguntas. Pídele a Claude que le agregue.</p>') +
+      '</div>' + body +
+      (finished ? '<div class="panel done"><h2 class="panel-title">Tanda completa: ' + okN + ' de ' + total + '</h2><p class="panel-sub">Lo que falló vuelve mañana; lo que resolviste vuelve en más días cada vez. ' +
+        '<button type="button" id="pMore" class="primary" style="margin-left:6px">Otra tanda</button></p></div>' : "");
+    document.getElementById("pBack").addEventListener("click", function () { state.view = "index"; persist(); render(); });
+    const more = document.getElementById("pMore");
+    if (more) more.addEventListener("click", function () { startPractice("extra"); });
+    Array.from(practiceView.querySelectorAll(".opt")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        const q = qById(b.getAttribute("data-q")), i = parseInt(b.getAttribute("data-i"), 10);
+        session.pick[q.id] = i;
+        record(q, i === q.a);
+        renderPractice();
+      });
+    });
+    Array.from(practiceView.querySelectorAll("[data-act]")).forEach(function (b) {
+      b.addEventListener("click", function () {
+        const q = qById(b.getAttribute("data-q")), act = b.getAttribute("data-act");
+        const areas = {};
+        Array.from(practiceView.querySelectorAll(".pq")).forEach(function (sec) { const a = sec.querySelector(".pq-area"); if (a) areas[sec.getAttribute("data-id")] = a.value; });
+        if (act === "hint") session.hint[q.id] = !session.hint[q.id];
+        else if (act === "sol") session.shown[q.id] = !session.shown[q.id];
+        else if (act === "ok") record(q, true);
+        else if (act === "ko") record(q, false);
+        renderPractice();
+        Array.from(practiceView.querySelectorAll(".pq")).forEach(function (sec) { const a = sec.querySelector(".pq-area"); if (a && areas[sec.getAttribute("data-id")]) a.value = areas[sec.getAttribute("data-id")]; });
+      });
+    });
+  }
+
+  function recommendations() {
+    const have = {};
+    CARDS.forEach(function (c) { have[c.id] = true; });
+    const existing = ROADMAP.map(function (r) {
+      let pts = 0;
+      r.connects.forEach(function (id) {
+        if (have[id]) pts += 1;
+        if (state.status[id] === "review") pts += 2;
+      });
+      const ready = r.requires.every(function (id) { return have[id]; });
+      if (!ready) pts -= 100;
+      return { r: r, pts: pts, ready: ready };
+    });
+    return existing.filter(function (x) { return x.ready; }).sort(function (a, b) { return b.pts - a.pts; });
+  }
+
+  function renderRecommender() {
+    const list = recommendations();
+    const top = list.slice(0, 4), rest = list.slice(4);
+    function item(x) {
+      const conn = x.r.connects.filter(function (id) { return cardById(id); }).map(function (id) { return escapeHtml(cardById(id).term.split(" — ")[0]); }).join(" · ");
+      const ask = "Agrega «" + x.r.term + "» a Profesor GeCo";
+      return '<li class="rec"><div class="rec-term">' + escapeHtml(x.r.term) + '<span class="rec-layer">' + escapeHtml(x.r.layer) + '</span></div>' +
+        '<p class="rec-why">' + escapeHtml(x.r.why) + '</p>' +
+        '<p class="rec-conn">Se conecta con: ' + conn + '</p>' +
+        '<button type="button" class="rec-copy" data-ask="' + escapeHtml(ask) + '">Copiar pedido</button></li>';
+    }
+    return '<div class="panel"><div class="eyebrow">Siguientes conceptos sugeridos</div>' +
+      '<p class="panel-sub">Se ordenan por cuántos conceptos de tu biblioteca tocan, y suben si alguno está marcado “repasar”. Copia el pedido y pégalo en el chat de este proyecto para que Claude lo agregue.</p>' +
+      '<ul class="rec-list">' + top.map(item).join("") + '</ul>' +
+      (rest.length ? '<details class="rec-more"><summary>Ver ' + rest.length + ' más</summary><ul class="rec-list">' + rest.map(item).join("") + '</ul></details>' : "") + '</div>';
+  }
+
+  function renderPracticePanel() {
+    const today = todayStr();
+    const h = state.hist[today];
+    const inProgress = state.daily && state.daily.date === today && Object.keys(state.daily.res || {}).length > 0 && !h;
+    const label = h ? "Hecha hoy: " + h.ok + " de " + h.total : (inProgress ? "En curso" : "Pendiente");
+    const due = QUIZ.filter(function (q) { const s = state.quiz[q.id]; return s && s.due && s.due <= today; }).length;
+    return '<div class="panel"><div class="eyebrow">Práctica del día · ' + escapeHtml(label) + '</div>' +
+      '<h2 class="panel-title">Dos preguntas y un mini desafío, de temas distintos</h2>' +
+      '<p class="panel-sub">Cada día mezcla temas. Prioriza lo que marcaste “repasar” y lo que ya toca volver a ver. ' + QUIZ.length + ' ejercicios en total' + (due ? ", " + due + " listos para repasar" : "") + '.</p>' +
+      '<button type="button" id="goPractice" class="primary">' + (h ? "Ver la tanda de hoy" : "Empezar") + ' &rarr;</button></div>';
+  }
+
+  document.getElementById("practiceBtn").addEventListener("click", function () {
+    const card = deckList()[state.index];
+    startPractice("concept", card.id);
+  });
+
+  render();
+  initRemote();
+})();
+</script>
+
+
+</body></html>

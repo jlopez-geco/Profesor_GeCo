@@ -1,0 +1,1685 @@
+[
+  {
+    "id": "4c8d13b7-fd2f-4401-aa73-de6d87a144a9",
+    "tipo": "concepto",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rls"
+    ],
+    "pregunta": "**RLS — Row Level Security**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Reglas que Postgres aplica fila por fila en cada consulta.\n\n**Sirve para** Que cada usuario vea o modifique solo las filas que le corresponden.\n\n**Dónde corre** En la base de datos, no en el frontend.\n\n**Analogía** Piensa en una tabla como un archivador con las carpetas de *todas* las OPS en el mismo cajón. Sin RLS, cualquiera con acceso al cajón puede sacar cualquier carpeta. RLS es ponerle una regla a cada carpeta por separado: \"esta la puede sacar solo tal tipo de persona\". Postgres revisa esa regla en cada SELECT/INSERT/UPDATE/DELETE automáticamente — la aplicación (React, el formulario) ni se entera, nunca tiene que acordarse de filtrar por su cuenta.\n\n**En simple** Imagina una caja con los cuadernos de muchos niños. *RLS* es un guardia que, cada vez que alguien pide un cuaderno, mira quién es y solo le entrega los suyos. Los demás cuadernos ni siquiera los ve.",
+    "capa": "Base de datos",
+    "explicacion": "**Cuidado**\n- Una tabla con RLS activado y **sin políticas** no devuelve nada (salvo a roles que se saltan RLS, como `service_role` o el dueño). Una tabla **sin RLS activado** queda abierta a cualquiera con permiso sobre ella.\n- `USING` filtra las filas que ya existen; `WITH CHECK` valida las filas que se insertan o modifican. Olvidar el segundo es un hueco clásico en UPDATE e INSERT.\n- Varias políticas permisivas sobre la misma tabla se combinan con **OR**: basta que una deje pasar. Agregar una política \"inocente\" puede abrir más de lo que querías.\n- Una política que consulta otra tabla con RLS puede volverse lenta o recursiva. Ahí entra SECURITY DEFINER (siguiente tarjeta).\n\n**Para practicar**\n- En un proyecto de prueba, crea una tabla y actívale RLS con `ALTER TABLE ... ENABLE ROW LEVEL SECURITY`. Consúltala como usuario autenticado: debe venir vacía.\n- Agrega una política de SELECT y repite la consulta con dos usuarios distintos. Verifica que cada uno ve solo lo suyo.\n- Intenta un UPDATE que cambie el `user_id` a otro usuario. Mira cómo se comporta con y sin `WITH CHECK`.\n- Corre los advisors de Supabase y mira qué tablas de `public` te marca sin RLS.\n\n**Por qué importa** Es la barrera **real**, nunca el frontend. Un bug en React puede ocultar un botón mal — pero no puede hacer que Postgres devuelva una fila que RLS decidió que no existe para ese usuario.\n\nFuente: [Supabase · Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)",
+    "ejemplo": "**Ejemplo real · tabla de observaciones de seguridad (proyecto de ejemplo)**\n```sql\nCREATE POLICY \"approved users read all\"\nON safety_observations FOR SELECT\nUSING (\n  EXISTS (\n    SELECT 1 FROM user_roles\n    WHERE user_roles.user_id = auth.uid()\n      AND user_roles.role = ANY (\n        ARRAY['usuario','admin','super_admin']::app_role[]\n      )\n  )\n);\n```\nSi tu auth.uid() no aparece en user_roles con uno de esos 3 roles, esa fila de safety_observations ni siquiera existe para tu consulta. No es un permiso que se revisa después del SELECT — es parte del SELECT mismo.\n\n**Bonus · RLS también manda en los INSERT**\n```sql\nCREATE POLICY \"guest insert\"\nON safety_observations FOR INSERT\nWITH CHECK (\n  auth.uid() IS NULL AND user_id IS NULL\n);\n```\nEsta es la regla que permite reportar una observación sin iniciar sesión — pero solo si el reporte no intenta hacerse pasar por ningún usuario (user_id debe venir vacío).",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:00.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:00.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "4045a3cb-09f8-4f2f-bdc6-551d71b05b7d",
+    "tipo": "concepto",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "requiere:rls",
+      "legacy:security-definer"
+    ],
+    "pregunta": "**SECURITY DEFINER**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Función que corre con los permisos de su dueño (el rol que la creó, normalmente `postgres`), no con los de quien la llama.\n\n**Sirve para** Consultar tablas que el usuario no puede leer directo (ej. user_roles) desde una política RLS.\n\n**Ojo** Siempre con SET search_path fijo.\n\n**Analogía** Una función SQL normal corre con los permisos de quien la llama — como un empleado que solo abre los cajones para los que tiene su propia llave. *SECURITY DEFINER* hace que la función corra con los permisos de su *dueño* (el rol que la creó, normalmente *postgres*) — le prestan el llavero del dueño, pero solo mientras dura esa tarea puntual, y solo para lo que esa tarea hace.\n\n**En simple** Imagina que tú no puedes entrar a la bodega, pero hay un ayudante que tiene la llave. Le preguntas \"¿soy admin?\", él entra con *su* llave, mira y te responde solo \"sí\" o \"no\". Tú nunca tocas la llave ni entras a la bodega.",
+    "capa": "Base de datos",
+    "explicacion": "**Cuidado**\n- En Supabase, las funciones del schema `public` se exponen como RPC en la API. Por defecto Postgres da EXECUTE a `PUBLIC`: una función SECURITY DEFINER puede quedar llamable por `anon` con los permisos de su dueño. Revoca con `REVOKE EXECUTE ... FROM PUBLIC, anon` y concede solo a quien corresponda.\n- Mantén la función mínima: una sola tarea, idealmente de solo lectura. Nunca armes SQL dinámico con parámetros sin sanitizar, porque lo ejecutaría con permisos del dueño.\n- Fija siempre `SET search_path`, y usa nombres calificados (`public.user_roles`) si quieres blindarte más.\n- Revisa el dueño de cada función SECURITY DEFINER: cuanto más amplios sus permisos, más daño puede hacer un error.\n\n**Para practicar**\n- Crea una función `es_admin(uuid)` sin SECURITY DEFINER y llámala como usuario normal: RLS le bloquea la lectura de `user_roles`.\n- Recréala con SECURITY DEFINER y `SET search_path = public`. Compara el resultado.\n- Haz `REVOKE EXECUTE` para `anon` y confirma que una llamada sin login falla.\n- Corre la consulta de `pg_proc` para listar todas tus funciones SECURITY DEFINER y revisa el dueño de cada una.\n\n**Por qué importa** **SET search_path = public** no es decorativo: sin fijarlo, alguien podría colar una tabla o función falsa en otro schema con el mismo nombre, y la función terminaría usando el llavero prestado para lo que no debía. Por eso el Mandamiento GeCo #2 exige fijar siempre el search_path en estas funciones.",
+    "ejemplo": "**Ejemplo real · función is_admin_or_super() (proyecto de ejemplo)**\n```sql\nCREATE FUNCTION is_admin_or_super(_user_id uuid)\nRETURNS boolean\nLANGUAGE sql STABLE\nSECURITY DEFINER\nSET search_path = public\nAS $$\n  SELECT EXISTS (\n    SELECT 1 FROM user_roles\n    WHERE user_id = _user_id\n      AND role IN ('admin','super_admin')\n  )\n$$;\n```\nEsta función consulta user_roles por dentro — algo que un usuario común no podría hacer directo (RLS se lo bloquearía). SECURITY DEFINER le presta, solo para esta tarea, los permisos de quien la creó.\n\n**Dónde se usa — conecta con la tarjeta de RLS**\n```sql\nCREATE POLICY \"admins update safety_observations\"\nON safety_observations FOR UPDATE\nUSING (is_admin_or_super(auth.uid()))\nWITH CHECK (is_admin_or_super(auth.uid()));\n```\nLa política de RLS no repite la consulta a mano: confía en esta función para decidir el permiso. Así es como RLS y SECURITY DEFINER trabajan juntos todo el tiempo.\n\n**Cómo ver quién es el dueño de una función**\n```sql\nSELECT proname,\n       proowner::regrole AS dueno,\n       prosecdef AS es_security_definer\nFROM pg_proc\nWHERE proname = 'is_admin_or_super';\n```\n\"Quien la creó\" es un rol de Postgres guardado en la función, no una persona, un computador ni una sesión. En Supabase, las migraciones suelen correr como `postgres`, así que ese suele ser el dueño.",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:01.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:01.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "2b737abc-b7e0-4e36-9906-0ce87bfde489",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:aws"
+    ],
+    "pregunta": "**AWS — Amazon Web Services**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** La plataforma de Amazon donde alquilas servidores, bases de datos, almacenamiento e IA en vez de comprarlos.\n\n**Sirve para** Tener infraestructura en minutos y pagar solo por lo que usas.\n\n**Ojo** Todo lo que dejas encendido cuesta, aunque no lo uses.\n\n**Analogía** AWS es como una compañía eléctrica, pero de computación: no construyes tu propia planta, te conectas y pagas por lo que consumes. Amazon opera centros de datos en todo el mundo, agrupados en *regiones* (por ejemplo São Paulo o N. Virginia), y cada región tiene varias *zonas de disponibilidad*: edificios separados, para que una falla en uno no tumbe todo. Encima de eso ofrece cientos de servicios: máquinas (EC2), almacenamiento (S3), bases de datos (RDS), IA (Bedrock) y muchos más.\n\n**En simple** Imagina que en vez de comprar una cocina gigante para hacer una fiesta, alquilas una por unas horas. Amazon tiene una ciudad enorme llena de cocinas, bodegas y máquinas, y tú alquilas solo lo que necesitas, solo el rato que lo usas.",
+    "explicacion": "**Cuidado**\n- **La región importa:** no todos los servicios ni modelos existen en todas las regiones, los precios cambian por región y tus datos viven donde los pongas. Elegirla es una decisión de latencia, costo y cumplimiento.\n- **El costo sorprende:** recursos olvidados (máquinas encendidas, volúmenes, IPs elásticas, NAT gateways) siguen cobrando. Pon una alerta de presupuesto (AWS Budgets) desde el primer día.\n- **Nunca uses la cuenta root** para el trabajo diario: actívale MFA, guárdala y trabaja con usuarios o roles de IAM (siguiente tarjeta).\n- La capa gratuita tiene límites y condiciones que han ido cambiando. Verifica las vigentes antes de confiar en ellas.\n\n**Para practicar**\n- Abre la consola de AWS y mira en qué región estás (arriba a la derecha). Cambia de región y observa cómo tus recursos “desaparecen”: están en la otra.\n- Crea un presupuesto mensual bajo en AWS Budgets, con alerta por correo.\n- Instala la AWS CLI y corre `aws sts get-caller-identity` para ver con qué identidad estás trabajando.\n- Abre Cost Explorer y busca qué servicio te cuesta más, aunque sea poco.\n\n**Por qué importa** Casi todo lo demás de esta categoría (IAM, EC2, Bedrock) son **servicios de AWS**. Dos ideas lo gobiernan todo: pagas por uso, y la seguridad se reparte. AWS cuida el edificio y el hardware; **tú** cuidas lo que pones adentro y quién entra (modelo de responsabilidad compartida).",
+    "ejemplo": "**Anatomía de un ARN, el “apellido” único de cualquier recurso**\n```text\narn:aws:ec2:sa-east-1:123456789012:instance/i-0abc123\n │   │   │      │          │            └─ el recurso concreto\n │   │   │      │          └─ ID de tu cuenta AWS\n │   │   │      └─ región (sa-east-1 = São Paulo)\n │   │   └─ servicio (ec2, s3, iam, bedrock...)\n │   └─ partición\n └─ ARN = Amazon Resource Name\n```\nVas a ver ARNs por todas partes, sobre todo en políticas de IAM, que es como se dice “sobre qué recurso”. Es un ejemplo genérico, no de tus proyectos.\n\n**Todo lo de la consola web también se puede hacer por terminal**\n```bash\naws ec2 describe-instances \\\n  --region sa-east-1 \\\n  --query 'Reservations[].Instances[].[InstanceId,State.Name]' \\\n  --output table\n```\nLista tus máquinas y su estado. Que todo sea una API es lo que permite automatizar y repetir la infraestructura sin hacer clics.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:02.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:02.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "9f1d4651-071d-489e-830d-92ca9609083d",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "requiere:aws",
+      "legacy:iam"
+    ],
+    "pregunta": "**IAM — Identity and Access Management**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** El sistema de AWS que define quién es cada persona o servicio y qué puede hacer.\n\n**Sirve para** Dar a cada uno solo los permisos que necesita, ni uno más.\n\n**Dónde corre** En toda la cuenta: se evalúa en cada llamada a cualquier servicio.\n\n**Analogía** Es un primo del RLS, pero para toda la nube: en vez de decidir qué *filas* ve alguien, decide qué *acciones* puede hacer sobre qué *recursos*. Tiene tres piezas: *identidades* (usuarios, grupos y roles), *políticas* (documentos que dicen permitido o denegado) y *recursos* (el bucket, la máquina, el modelo). Por defecto todo está denegado: hay que permitir de forma explícita.\n\n**En simple** Imagina un edificio con muchas puertas. IAM es el portero con una lista: sabe quién eres, qué puertas puedes abrir y cuáles no. Si tu nombre no aparece en la lista de esa puerta, no pasas, aunque llegues hasta ella.",
+    "explicacion": "**Cuidado**\n- **Mínimo privilegio de verdad:** evita `Action: *` y `Resource: *`. Empieza estrecho y amplía cuando algo falle, no al revés.\n- Prefiere **roles** con credenciales temporales a usuarios con access keys de larga vida. Una key filtrada en un repositorio es una de las causas más frecuentes de incidentes en AWS.\n- Hay varias capas que se combinan: políticas de identidad, de recurso, límites de permisos y SCPs de la organización. Un permiso solo funciona si ninguna capa lo bloquea.\n- Cuando ves `AccessDenied`, lee el mensaje completo: nombra la acción y el recurso que falló. Para depurar usa el IAM Policy Simulator y Access Analyzer.\n\n**Para practicar**\n- Crea un usuario de prueba sin permisos y verifica que `aws s3 ls` falla con AccessDenied.\n- Escribe una política que solo permita `s3:GetObject` sobre un bucket y adjúntala. Comprueba que leer funciona y borrar no.\n- Agrega un `Deny` explícito y comprueba que gana sobre el Allow.\n- Corre IAM Access Analyzer y revisa si algo quedó expuesto públicamente.\n\n**Por qué importa** Cada error de IAM es **demasiado permiso** (riesgo de seguridad) o **muy poco** (la app falla con AccessDenied). Saber leer una política es la habilidad de seguridad más rentable en AWS, y es la base para usar bien EC2 y Bedrock.\n\nFuente: [AWS IAM · Lógica de evaluación de políticas](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html)",
+    "ejemplo": "**Política mínima: leer objetos de un bucket de S3**\n```json\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Effect\": \"Allow\",\n      \"Action\": [\"s3:GetObject\"],\n      \"Resource\": \"arn:aws:s3:::mi-bucket/*\"\n    }\n  ]\n}\n```\nSe lee así: **permite** (`Effect`) la acción `s3:GetObject` solo sobre los objetos de `mi-bucket`. Qué, sobre qué y permitir o no: el mismo trío en cualquier política. Ejemplo genérico, no de tus proyectos.\n\n**Un Deny explícito gana siempre**\n```json\n{\n  \"Effect\": \"Deny\",\n  \"Action\": \"s3:DeleteObject\",\n  \"Resource\": \"arn:aws:s3:::mi-bucket/*\"\n}\n```\nUn `Deny` explícito le gana a cualquier `Allow`, venga de donde venga. Orden de evaluación: Deny explícito, luego Allow explícito, y si no hay nada, denegado por defecto.\n\n**Rol para una máquina EC2: sin llaves en el código**\n```json\n{\n  \"Effect\": \"Allow\",\n  \"Principal\": { \"Service\": \"ec2.amazonaws.com\" },\n  \"Action\": \"sts:AssumeRole\"\n}\n```\nEsta es la *política de confianza* del rol: dice quién puede asumirlo (aquí, el servicio EC2). La máquina recibe credenciales temporales automáticas, así no guardas access keys en el código ni en un `.env`.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:03.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:03.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "0575c217-e290-4fe5-a0b9-9928148afa26",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "requiere:aws",
+      "requiere:iam",
+      "legacy:ec2"
+    ],
+    "pregunta": "**EC2 — Elastic Compute Cloud**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Servidores virtuales que alquilas en AWS por el tiempo que los uses.\n\n**Sirve para** Correr tu app, un backend o un proceso pesado en una máquina que controlas por completo.\n\n**Ojo** Mientras esté encendida cobra, la uses o no.\n\n**Analogía** EC2 es arrendar un computador dentro de un centro de datos de Amazon. Tú eliges el tamaño (*tipo de instancia*: cuánta CPU y memoria), el punto de partida del sistema (*AMI*), el disco (*EBS*) y quién puede acercarse (*security group*, el cortafuegos de esa máquina). Después entras por SSH y haces lo que harías en cualquier servidor Linux. A diferencia de los servicios gestionados, aquí *tú* eres responsable de actualizar, instalar y vigilar.\n\n**En simple** Imagina que alquilas un computador por internet. Eliges qué tan fuerte lo quieres y lo prendes. Mientras está prendido, pagas; cuando lo apagas dejas de pagar el “cerebro”, aunque el “cajón” donde guarda tus cosas sigue costando un poquito.",
+    "explicacion": "**Cuidado**\n- **Detener no es terminar.** Una máquina detenida no cobra cómputo, pero su disco EBS y las IPs elásticas sí. Terminarla la elimina (y por defecto borra el disco raíz). Los volúmenes huérfanos son un costo clásico.\n- La IP pública cambia al detener e iniciar, salvo que uses una IP elástica. No amarres un DNS a una IP efímera.\n- Dimensiona midiendo, no por intuición: mira CPU y memoria en CloudWatch. Las familias `t` funcionan con créditos de CPU: si la carga alta es sostenida, se estrangulan.\n- Prefiere un rol de IAM y **SSM Session Manager** en vez de abrir el puerto 22, y mantén el sistema operativo parchado.\n\n**Para practicar**\n- En una cuenta de prueba, lanza la instancia más barata disponible con un security group que permita SSH solo desde tu IP.\n- Conéctate por SSH, instala `htop` y obsérvalo.\n- Detén la máquina y compara la IP pública antes y después. Luego revisa en Cost Explorer qué sigue cobrando (el volumen).\n- Termina la instancia y confirma que no quedó ningún volumen ni IP elástica huérfana.\n\n**Por qué importa** Es el bloque básico de cómputo en la nube: casi todo lo que corre en un servidor puede correr aquí. A cambio de máxima libertad, **tú** operas la máquina. Por eso es la base para entender después las opciones más gestionadas, como contenedores o serverless.",
+    "ejemplo": "**Lanzar una máquina desde la terminal**\n```bash\naws ec2 run-instances \\\n  --image-id ami-0123456789abcdef0 \\\n  --instance-type t3.micro \\\n  --key-name mi-llave \\\n  --security-group-ids sg-0123456789abcdef0 \\\n  --iam-instance-profile Name=mi-rol-ec2\n```\nLos IDs son de relleno. Cuatro decisiones: qué sistema (AMI), qué tamaño (`t3.micro`), cómo entrar (llave) y quién puede acercarse (security group). Con `--iam-instance-profile` la máquina asume un rol de IAM, que conecta con la tarjeta anterior.\n\n**SSH solo desde tu IP**\n```bash\naws ec2 authorize-security-group-ingress \\\n  --group-id sg-0123456789abcdef0 \\\n  --protocol tcp --port 22 \\\n  --cidr 203.0.113.25/32\n```\n`/32` significa una sola dirección IP. Esta regla permite SSH únicamente desde esa IP (aquí, una de documentación).\n\n**La regla que no debes dejar**\n```bash\naws ec2 authorize-security-group-ingress \\\n  --group-id sg-0123456789abcdef0 \\\n  --protocol tcp --port 22 \\\n  --cidr 0.0.0.0/0\n```\n`0.0.0.0/0` en el puerto 22 abre SSH a todo internet. Los bots escanean eso de forma permanente.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:04.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:04.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "8c9d07bc-4174-4fa6-b0c4-f18d08fae0f1",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "requiere:aws",
+      "requiere:iam",
+      "legacy:bedrock"
+    ],
+    "pregunta": "**Amazon Bedrock**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Un servicio de AWS que da acceso por API a modelos de IA de varios proveedores, sin administrar servidores.\n\n**Sirve para** Usar modelos como Claude dentro de tu cuenta AWS, con su IAM, su facturación y su red.\n\n**Ojo** Pagas por tokens (entrada y salida) y los modelos disponibles varían según la región.\n\n**Analogía** Bedrock es un menú de modelos de IA (por ejemplo Claude de Anthropic, Nova de Amazon, Llama o Mistral) al que accedes con una API de AWS. No levantas máquinas con GPU ni descargas modelos: haces una llamada, el modelo responde y te cobran por *tokens*, que son trozos de texto, tanto los que envías como los que recibes. Como es parte de AWS, el acceso se controla con *IAM* y la factura llega en la misma cuenta que el resto.\n\n**En simple** Imagina una biblioteca de cerebros de computador de distintas marcas. En vez de construir uno tú, llamas por teléfono al que elijas, le haces una pregunta y te responde. Bedrock es esa biblioteca, con una sola puerta de entrada, y pagas según cuánto hablas.",
+    "explicacion": "**Cuidado**\n- **Costo = tokens de entrada + tokens de salida**, con precio distinto por modelo. Prompts largos y conversaciones que reenvían todo el historial multiplican el gasto: mide los tokens por llamada.\n- **Disponibilidad por región y modelo:** no todos están en todas partes. Los perfiles de inferencia entre regiones suben la capacidad, pero la solicitud puede procesarse en otra región; revisa si tus requisitos de datos lo permiten.\n- Existen cuotas (solicitudes y tokens por minuto). En producción maneja `ThrottlingException` con reintentos y espera exponencial.\n- **Trade-off frente a la API directa del proveedor:** Bedrock integra IAM, facturación y red privada de AWS, pero las funciones más nuevas de un modelo a veces llegan antes a la API directa. Verifica en la documentación vigente lo que necesitas.\n- Para datos sensibles, revisa los términos vigentes de AWS sobre uso de prompts y respuestas, y piensa con cuidado qué registras en logs.\n\n**Para practicar**\n- En la consola de Bedrock abre el playground, elige un modelo y prueba un prompt. Fíjate en el conteo de tokens de entrada y salida.\n- Crea un rol de IAM con solo `bedrock:InvokeModel` y úsalo desde un script como el de arriba.\n- Quita el permiso y confirma que aparece `AccessDeniedException`.\n- Envía el mismo prompt a dos modelos distintos y compara respuesta, tokens y costo estimado.\n\n**Por qué importa** Bedrock es el puente entre la IA y todo lo anterior: **IAM** decide quién puede llamar al modelo y **AWS** te factura. Elegir Bedrock en vez de llamar directo a la API de un proveedor suele ser una decisión de gobierno: dónde viven los datos, cómo se autentica y cómo se paga.",
+    "ejemplo": "**Llamar a un modelo con Python (API Converse)**\n```python\nimport boto3\n\nclient = boto3.client(\"bedrock-runtime\", region_name=\"us-east-1\")\n\nresp = client.converse(\n    modelId=\"<ID_DEL_MODELO_O_PERFIL>\",  # cópialo desde la consola\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [{\"text\": \"Explícame RLS en una frase\"}],\n    }],\n    inferenceConfig={\"maxTokens\": 300},\n)\n\nprint(resp[\"output\"][\"message\"][\"content\"][0][\"text\"])\n```\nNo puse un ID de modelo real a propósito: cópialo desde la consola de Bedrock en tu región, porque algunos modelos se llaman mediante *perfiles de inferencia*. `Converse` usa el mismo formato para distintos proveedores. boto3 toma las credenciales de tu rol o perfil de AWS: nunca las escribas en el código.\n\n**Permiso IAM mínimo para invocar modelos**\n```json\n{\n  \"Effect\": \"Allow\",\n  \"Action\": [\n    \"bedrock:InvokeModel\",\n    \"bedrock:InvokeModelWithResponseStream\"\n  ],\n  \"Resource\": \"*\"\n}\n```\nEs el permiso que le das a tu app o rol. Aquí `Resource: *` es solo para ilustrar; en producción acótalo a los modelos o perfiles que realmente usas (mínimo privilegio, como en la tarjeta de IAM).",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:05.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:05.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "bfd2a312-5369-499e-be80-f557dc8f9019",
+    "tipo": "concepto",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "requiere:rls",
+      "requiere:security-definer",
+      "legacy:rpc"
+    ],
+    "pregunta": "**RPC — Remote Procedure Call**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Llamar desde tu app a una función que vive en la base de datos, pidiéndola por su nombre.\n\n**Sirve para** Hacer varios pasos juntos y de forma atómica, o lógica que no cabe en un simple select o insert.\n\n**Ojo** Cada función expuesta por RPC es una puerta nueva a tu base de datos.\n\n**Analogía** RPC significa *llamada a procedimiento remoto*: pedir que se ejecute una función que vive en otro lugar. En Supabase, ese otro lugar es tu base de datos. Normalmente tu app lee o escribe tablas directamente (*select*, *insert*). Con RPC escribes la lógica una vez, como función SQL, y la app solo dice “ejecuta esta función con estos datos”. Supabase publica automáticamente como endpoints las funciones del schema `public`, y por eso `supabase.rpc('nombre')` funciona sin armar un servidor aparte.\n\n**En simple** Imagina un libro de recetas en la cocina. En vez de explicarle al cocinero cada paso por teléfono, le dices solo el nombre: “haz la receta 5”, y él la prepara completa. RPC es decir desde lejos el nombre de la receta (la función) para que la base de datos la ejecute.",
+    "capa": "Base de datos",
+    "explicacion": "**Cuidado**\n- **Por defecto la función corre como quien llama** (SECURITY INVOKER), así que RLS sigue protegiendo. El riesgo aparece al marcarla SECURITY DEFINER: RLS deja de ayudarte y la función debe validar quién llama.\n- Al crear una función, Postgres concede EXECUTE a `PUBLIC` por defecto y la API la expone. Sin `REVOKE`, `anon` puede llamarla. Concede solo a `authenticated` o al rol que corresponda.\n- No decidas permisos con un parámetro que el cliente puede falsificar. Nunca recibas un `user_id` como argumento para autorizar: obtén la identidad dentro de la función con `auth.uid()`.\n- Lo que no quieras como API no debe vivir en un schema expuesto: ponlo en uno aparte (por ejemplo `private`) y llámalo desde otras funciones.\n- Cambiar los argumentos de una función crea una **sobrecarga nueva**, no reemplaza la anterior: la versión vieja sigue expuesta. Revísalo al migrar.\n\n**Para practicar**\n- En un proyecto de prueba, crea una función simple sin SECURITY DEFINER y llámala con `supabase.rpc` como usuario autenticado.\n- Llámala ahora sin login (rol `anon`) y entiende por qué falla o por qué no.\n- Corre la consulta de auditoría y encuentra qué funciones SECURITY DEFINER puede ejecutar `anon`.\n- Corrige una con `REVOKE` y `GRANT` y repite la consulta para confirmar el cambio.\n\n**Por qué importa** RPC es el puente entre tu app y la lógica de la base de datos: da potencia (pasos atómicos, menos viajes) pero cada función expuesta es **API pública**. Junta las dos tarjetas anteriores: RLS protege las tablas y SECURITY DEFINER puede saltárselo, así que lo que se expone por RPC se revisa con lupa. (Ojo: “RPC” también es un término más general, como en gRPC; aquí hablamos del sentido de Supabase.)",
+    "ejemplo": "**Crear una función que se pueda llamar por RPC**\n```sql\ncreate or replace function public.cerrar_tarea(p_id uuid)\nreturns void\nlanguage plpgsql\nsecurity invoker          -- es el valor por defecto: corre como quien llama\nset search_path = public\nas $$\nbegin\n  update public.tareas\n     set estado = 'cerrada'\n   where id = p_id;\nend;\n$$;\n```\nEjemplo genérico (tabla `tareas`), no de tus proyectos. Como es `security invoker`, las políticas de RLS de `tareas` siguen aplicando: si quien llama no puede actualizar esa fila, no se actualiza.\n\n**Llamarla desde la app**\n```ts\nconst { data, error } = await supabase.rpc('cerrar_tarea', {\n  p_id: tareaId,\n})\n```\nPor debajo es un `POST /rest/v1/rpc/cerrar_tarea`. Los argumentos viajan en el cuerpo y el resultado vuelve como cualquier otra respuesta de la API.\n\n**Lo que no debes dejar: SECURITY DEFINER sin control**\n```sql\ncreate function public.vaciar_tareas()\nreturns void\nlanguage sql\nsecurity definer\nas $$\n  delete from public.tareas;\n$$;\n```\nCorre con permisos de su dueño (se salta RLS), no valida quién llama, no fija `search_path` y, al crearla, Postgres da EXECUTE a `PUBLIC`. Como la API la expone, **cualquiera podría vaciar la tabla**.\n\n**Cerrar la puerta: quién puede ejecutarla**\n```sql\nrevoke execute on function public.vaciar_tareas() from public, anon;\ngrant  execute on function public.vaciar_tareas() to authenticated;\n```\nQuita el permiso por defecto y concédelo solo a quien corresponda. Aun así, una función SECURITY DEFINER debería comprobar dentro quién llama (por ejemplo con `auth.uid()` y la tabla de roles).\n\n**Auditoría rápida: qué funciones tienes expuestas**\n```sql\nselect p.proname,\n       p.prosecdef                              as security_definer,\n       pg_get_userbyid(p.proowner)              as dueno,\n       p.proconfig                              as config,\n       has_function_privilege('anon', p.oid, 'EXECUTE') as anon_puede\nfrom pg_proc p\njoin pg_namespace n on n.oid = p.pronamespace\nwhere n.nspname = 'public'\n  and p.prokind = 'f';\n```\nBusca primero filas con `security_definer = true` y `anon_puede = true`: son las más urgentes. En las SECURITY DEFINER, `config` debería mostrar un `search_path` fijo.",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:06.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:06.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "405274d7-5da9-435e-94dd-8fe6c9683676",
+    "tipo": "concepto",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "requiere:rls",
+      "legacy:bd-compartida"
+    ],
+    "pregunta": "**¿Compartir la base de datos o separarla?**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Decidir si dos o más apps usan la misma base de datos (en Supabase, el mismo proyecto) o cada una tiene la suya.\n\n**Conviene compartir** Cuando es un mismo dominio, con las mismas personas, un solo dueño del esquema y sin obligación de aislar datos.\n\n**Conviene separar** Cuando son dominios distintos, con equipos o ritmos distintos, datos sensibles, o cuando una app puede tumbar a la otra.\n\n**Analogía** Una base de datos compartida es una casa compartida: *una sola máquina* (CPU, memoria, conexiones), *un solo esquema* que todos pueden modificar y *un solo login*. Eso trae tres acoplamientos distintos, y conviene mirarlos por separado: *de capacidad* (si una app satura la base, la otra se cae), *de datos* (una app lee o escribe las tablas de la otra) y *de identidad* (los mismos usuarios sirven en ambas). Compartir no es malo: es barato, simple y permite cruzar datos sin APIs. El problema aparece cuando juntas cosas que deberían poder fallar, cambiar o auditarse por separado. Hay además un punto medio: una sola base con *esquemas* separados por app (por ejemplo `ops` y `salud` en vez de todo en `public`), con un solo dueño de migraciones. Ordena los datos, pero no resuelve el acoplamiento de capacidad.\n\n**En simple** Imagina dos familias que viven en la misma casa. Comparten cocina, refrigerador y llaves. Si son una sola familia, es cómodo. Pero si son dos familias distintas, cuando una deja la cocina hecha un desastre, la otra no puede cocinar, y cualquiera puede abrir el cajón de la otra. A veces conviene una casa; a veces, dos casas con una puerta entre ellas.",
+    "explicacion": "**Cuidado**\n- **“No compartimos datos” rara vez es cierto.** Antes de decidir, busca en el código de cada app las tablas que lee y escribe (por ejemplo `grep` de `.from('`). La decisión original asumía cero acoplamiento de datos y no era así.\n- **El login compartido es el costo oculto.** Si ambas apps usan el mismo `auth.users`, separar obliga a migrar usuarios, contraseñas o sesiones. Cuanto más tiempo pase, más caro.\n- **Esquemas separados ordenan, pero no aíslan la capacidad.** Siguen compartiendo CPU, memoria y conexiones. Sirven contra el desorden, no contra los incidentes de rendimiento.\n- **Separar con FKs o código cruzado** obliga a reemplazarlos por una API, una vista o una réplica. Decide eso antes de mover datos, no después.\n- **No separes bajo presión de un incidente ni sin staging.** Primero apaga el incendio en sitio; la migración es un proyecto con plan, respaldo y vuelta atrás.\n- **“Diferido” sin fecha suele ser “nunca”.** Toda decisión de diferir la separación necesita una fecha de revisión y un disparador concreto (un contrato, una ley, un umbral de carga).\n\n**Para practicar**\n- Elige dos apps que comparten base. Lista qué tablas usa cada una y marca las que usan ambas.\n- Responde las 7 preguntas de arriba por escrito, una línea cada una, y anota cuáles no sabes responder.\n- Para cada respuesta que no sepas, anota quién la sabe (cliente, legal, el equipo de la otra app).\n- Escribe la decisión como un registro de decisión (ADR): contexto, opciones, elección, consecuencias y fecha de revisión.\n\n**Por qué importa** Es una decisión **cara de revertir**: separar después implica migrar datos, usuarios y código, y juntar después implica reconciliar esquemas. Por eso se decide con preguntas explícitas y no por costumbre. En GeCo ya tenemos los tres casos: Proyecto A (compartir está bien), Proyecto B y Proyecto C (compartir causó una caída una madrugada) y Proyecto D (separar desde el inicio, con la misma convención).",
+    "ejemplo": "**Caso Proyecto A: compartir es lo correcto**\n```text\nApps:      web · móvil · RAG · widget\nDominio:   uno solo (Planner, horas, personas)\nUsuarios:  los mismos en todas\nEsquema:   un dueño de migraciones\nDatos:     sin obligación de aislar\n→ Una sola base. Separarla obligaría a\n  sincronizar datos que son, de verdad, los mismos.\n```\nSon cuatro puertas a la misma casa, no cuatro casas. Separar crearía trabajo (APIs, sincronización, logins duplicados) sin quitar ningún riesgo real.\n\n**Caso Proyecto B + Proyecto C: compartir costó caro**\n```text\nApps:      proyecto-b (salud ocupacional)\n           proyecto-c (observaciones de seguridad)\nDominio:   distinto · equipos y ritmos distintos\nDatos:     salud = sensibles (Ley 21.719)\nEsquema:   dos carpetas de migraciones activas\nCapacidad: una madrugada · el listado de observaciones bajaba\n           ~85 MB por request → timeouts en\n           PostgREST → cayeron las DOS apps\nDatos:     proyecto-b igual lee y escribe\n           safety_observations y ops_status_history\n```\nEl incidente fue de capacidad, no de datos: una pantalla de Proyecto C saturó la base que usaba Proyecto B. Además, la decisión original decía que ninguna app necesitaba datos de la otra, y el código mostró que Proyecto B tiene un dashboard y un análisis de Proyecto C. La respuesta, unos días después: son dos productos, usados por casi los mismos admins, y Proyecto B solo necesita *mirar* un resumen de Proyecto C. Eso es una vista de solo lectura, no un producto compartido, así que la dirección es separar. La pantalla de Proyecto B debería pedir solo agregados (conteos, estados) a una función, para que al separar baste cambiar de dónde vienen los datos.\n\n**Caso Proyecto D: separar desde el día uno**\n```text\nProyecto Supabase propio\n+ misma convención de roles que Proyecto B\n  (profiles · user_roles · app_role)\n→ No suma carga a la base compartida\n→ Si algún día se integra, los roles\n  ya calzan y no hay que traducir nada\n```\nSeparar no significa ser distintos en todo. Copiar la convención permite unir más adelante sin migrar a ciegas.\n\n**Las preguntas para decidir**\n```text\n1. ¿Es el mismo dominio y las mismas personas?\n2. ¿Una app lee o escribe tablas de la otra?\n   ¿Esa función es deliberada?\n3. ¿Hay UN dueño de migraciones y del esquema?\n4. ¿Si una app satura la base, es aceptable\n   que la otra se caiga?\n5. ¿Algún contrato o ley exige aislar los datos\n   (salud, datos personales, otro cliente)?\n6. ¿Los equipos y los ritmos de despliegue\n   son los mismos?\n7. ¿Cuánto cuesta separar después?\n   (usuarios en auth.users, FKs cruzadas, código)\n\nMayoría \"sí\" en 1, 3 y 6, y \"no\" en 5\n→ compartir es razonable.\nUn \"sí\" en 5, o \"no\" en 4\n→ separar, o al menos planificarlo con fecha.\n```\nNo es una suma de puntos. La pregunta 5 sola puede decidir: si la ley o el contrato exige aislar, la comodidad deja de importar.",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:07.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:07.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "a9573452-443b-4531-96e3-47e4b5b2278c",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "requiere:aws",
+      "legacy:serverless"
+    ],
+    "pregunta": "**SERVERLESS**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Un modelo donde escribes el código y el proveedor se encarga de los servidores, del escalado y de los parches.\n\n**Sirve para** Cargas que llegan a ratos o en picos, sin pagar por máquinas encendidas sin hacer nada.\n\n**Ojo** Sí hay servidores; solo que no los administras tú. Y tiene límites de tiempo y de memoria por ejecución.\n\n**Analogía** Con un servidor tradicional (como una máquina EC2) alquilas un computador y lo tienes encendido, lo uses o no: tú lo actualizas, lo escalas y lo vigilas. En *serverless* subes una función o un servicio y el proveedor decide dónde y cuándo correrlo: crea más copias si llega mucha gente, y baja a cero si no llega nadie. Pagas por lo que se ejecuta, no por lo que está encendido. El nombre confunde: **sí hay servidores**, pero no son tu problema. Dentro de serverless hay dos sabores: *funciones* (Lambda, Edge Functions), que corren cuando algo las dispara, y *servicios gestionados* (S3, DynamoDB, Aurora Serverless), que escalan solos.\n\n**En simple** Imagina que quieres jugar fútbol pero no quieres comprar ni cuidar una cancha. Cada vez que quieres jugar, llega una cancha lista, juegas el rato que necesites y te cobran solo esos minutos. La cancha existe, pero alguien más la cuida.",
+    "explicacion": "**Cuidado**\n- **Arranque en frío (cold start):** la primera ejecución, o cuando se crea una copia nueva, tarda más porque hay que preparar el entorno. Importa en rutas donde el usuario espera.\n- **Sin estado local:** no guardes datos en memoria o en disco esperando que la próxima ejecución los encuentre. Puede correr en otra copia. El estado va en una base de datos o en un almacenamiento externo.\n- **Límites por ejecución:** tiempo máximo, memoria, tamaño de la respuesta. Diseña para trabajos cortos, y las tareas largas se parten o se mandan a una cola.\n- **El costo escala con el abuso:** si alguien llama tu función un millón de veces, pagas un millón de ejecuciones. Pon límites, autenticación y alertas de gasto.\n- **Dependencia del proveedor:** el código que usa eventos y permisos propios de un proveedor cuesta más de mover. Un runtime abierto como Deno reduce ese riesgo.\n\n**Para practicar**\n- Escribe en una línea qué parte de una app tuya correría bien en serverless y cuál no, y por qué.\n- Para esa parte, anota qué la dispararía (una petición HTTP, un archivo nuevo, una hora) y dónde guardaría su estado.\n- Estima cuántas veces al día se ejecutaría y compáralo con tener una máquina encendida. ¿Cuál es más barata a ese ritmo?\n\n**Por qué importa** Es la idea detrás de AWS Lambda y de las Edge Functions de Supabase. Si entiendes qué delegas (la operación) y qué conservas (el diseño, la seguridad, el estado), entiendes por qué una función serverless tiene límites de tiempo, por qué no guarda datos y por qué cada llamada pública cuesta plata.\n\nFuente: [AWS · Qué es serverless](https://aws.amazon.com/what-is/serverless-computing/)",
+    "ejemplo": "**Servidor tradicional vs serverless, lado a lado**\n```text\n                EC2 (servidor)         Serverless (función)\nQuién lo opera  tú                     el proveedor\nEscalado        lo configuras tú       automático\nSin tráfico     sigue encendido        baja a cero\nCobro           por hora encendido     por ejecución y recursos usados\nEstado          puede vivir en disco   no lo asumas: guárdalo afuera\nDuración        sin límite             límite por ejecución\n```\nNo es que uno sea mejor: son herramientas distintas. Una API con tráfico parejo y pesado a veces sale más barata en un servidor; una tarea que corre 5 veces al día, casi siempre en serverless.\n\n**Un caso típico de serverless**\n```text\nAlguien sube una foto a un bucket de S3\n   → S3 dispara un evento\n   → una función Lambda genera la miniatura\n   → la guarda en otro bucket\n\nSin tráfico: no se ejecuta nada y no pagas cómputo.\nMil fotos juntas: AWS crea las copias que haga falta.\n```\nEs el patrón de arquitectura dirigida por eventos: algo ocurre, algo reacciona. La función no “está corriendo” esperando.\n\n**Cuando serverless NO es lo ideal**\n```text\n- Proceso que dura horas sin parar\n- Conexión abierta permanente con mucho estado en memoria\n- Tráfico enorme y constante, donde pagar por ejecución\n  sale más caro que una máquina fija\n- Quieres control total del sistema operativo\n```\nPara lo primero, Lambda tiene un máximo de 15 minutos por ejecución. Para lo último, una máquina o un contenedor.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:08.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:08.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "135cb111-afca-44fe-93be-f944db07520c",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "requiere:aws",
+      "requiere:iam",
+      "requiere:serverless",
+      "legacy:lambda"
+    ],
+    "pregunta": "**AWS Lambda (funciones Lambda)**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** El servicio de AWS para correr una función de código en respuesta a un evento, sin administrar servidores.\n\n**Sirve para** Reaccionar a algo (una petición HTTP, un archivo nuevo en S3, un mensaje en una cola, una hora) con cómputo que se paga por ejecución.\n\n**Ojo** Máximo 15 minutos por ejecución, y la función necesita un rol de IAM con solo los permisos que usa.\n\n**Analogía** Una *función Lambda* es un trozo de código (en Python, Node.js, Java y otros lenguajes) con un punto de entrada llamado *handler*. Algo la dispara: una llamada HTTP a través de API Gateway, un archivo en S3, un mensaje en SQS, un cron de EventBridge. Lambda crea un *entorno de ejecución*, corre tu handler y, si llegan más eventos juntos, crea más entornos en paralelo. Tú eliges la memoria (de 128 MB a 10 240 MB) y la CPU crece en proporción a esa memoria. Cada ejecución puede durar hasta 900 segundos (15 minutos). La función corre con un *rol de ejecución* de IAM: ese rol es todo lo que ella puede hacer en AWS.\n\n**En simple** Imagina un ayudante que duerme hasta que suena un timbre. Cuando suena, se despierta, hace exactamente la tarea que le enseñaste y vuelve a dormir. Solo le pagas por el rato que estuvo despierto.",
+    "explicacion": "**Cuidado**\n- **Timeout por defecto de 3 segundos.** Una función nueva puede fallar por eso aunque el código esté bien. Ajústalo al trabajo real, sin subirlo al máximo por costumbre.\n- **Memoria = CPU.** Más memoria da más CPU, y a veces una función termina antes y sale más barata aunque cueste más por segundo. Se mide, no se adivina (existe la herramienta AWS Lambda Power Tuning).\n- **Los eventos asíncronos se reintentan.** Si tu función falla, Lambda puede volver a ejecutarla con el mismo evento. Escríbela para que correrla dos veces no cobre dos veces ni duplique registros (idempotencia).\n- **No guardes secretos en el código ni en variables de entorno sin pensar.** Usa Secrets Manager o Parameter Store y dale al rol solo el permiso de leer ese secreto.\n- **Un rol con `*` es una función con llave maestra.** Revisa los permisos con IAM Access Analyzer y los logs de CloudTrail.\n- **Si la función está en una VPC,** necesita una ruta de salida (NAT o endpoints) para llamar a internet o a servicios de AWS. Si no, se queda esperando hasta el timeout.\n\n**Para practicar**\n- Crea una función Lambda de prueba desde la consola con el código de arriba. Invócala con el evento `{\"nombre\": \"Juan\"}` y mira el log en CloudWatch.\n- Bájale el timeout a 1 segundo y agrégale `time.sleep(2)`. Observa el error de timeout en los logs.\n- Mira en el log la línea `REPORT`: busca `Duration`, `Memory Size` y, en el primer evento, `Init Duration`.\n- Revisa el rol de ejecución que AWS le creó y pregunta: ¿qué permisos tiene que no necesita?\n\n**Por qué importa** Lambda es la forma más conocida de serverless y te sirve de vara para medir las Edge Functions de Supabase: ambas son funciones que despiertan por un evento, ambas tienen límites, ambas dependen de qué permisos reciben. La diferencia más importante es dónde corren y con qué runtime, y eso está en la tarjeta de Edge Functions.\n\nFuentes: [AWS · Cuotas de Lambda](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html), [AWS Compute Blog · Ciclo de vida de Lambda](https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/)",
+    "ejemplo": "**Una función mínima en Python (ejemplo genérico, no de tus proyectos)**\n```python\nimport json\n\n# Esto corre UNA vez por entorno (fase de inicialización)\nsaludo = \"Hola\"\n\ndef handler(event, context):\n    # Esto corre en CADA invocación\n    nombre = event.get(\"nombre\", \"mundo\")\n    return {\n        \"statusCode\": 200,\n        \"body\": json.dumps({\"mensaje\": f\"{saludo}, {nombre}\"})\n    }\n```\nEl código fuera del handler se ejecuta al crear el entorno y se reutiliza mientras ese entorno siga vivo. Por eso ahí van cosas caras de crear, como clientes de base de datos. Lo de dentro corre en cada evento.\n\n**El rol de ejecución: solo lo que la función necesita**\n```json\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [{\n    \"Effect\": \"Allow\",\n    \"Action\": [\"s3:GetObject\"],\n    \"Resource\": \"arn:aws:s3:::mi-bucket/entrada/*\"\n  }]\n}\n```\nEsta función solo puede leer objetos de una carpeta de un bucket. Si alguien logra hacerla ejecutar algo malo, el daño queda limitado a eso. Es el principio de mínimo privilegio de la tarjeta de IAM.\n\n**Ciclo de vida: por qué hay arranques en frío**\n```text\nPrimer evento (entorno nuevo):\n  INIT   crea el entorno, carga el código, corre lo de fuera del handler\n  INVOKE corre el handler\n        ↓ el entorno se congela\n\nSiguiente evento (entorno reutilizado):\n  INVOKE corre el handler   ← sin INIT: arranque \"en caliente\"\n\nEventos simultáneos: cada uno necesita su propio entorno,\nasí que varios pueden hacer INIT a la vez.\n```\nUn arranque en frío es la suma de INIT más INVOKE. AWS dice que no conviene depender de que el entorno se reutilice: puede no pasar.\n\n**Un error común: pedirle a Lambda lo que no puede dar**\n```text\nTarea: procesar un archivo que tarda 40 minutos\nIdea:  \"subo el timeout al máximo\"\nLímite: 15 minutos (900 s), no se puede aumentar\n\nMejor: partir el trabajo en trozos y encolarlos (SQS),\n       o usar un contenedor / otro servicio de cómputo\n```\nAWS publica el tope de 900 segundos como un límite de configuración de la función. Cuando una tarea no cabe, se rediseña, no se negocia el límite.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:09.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:09.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "b420b1b2-03a7-4cea-b89a-b29e578cea38",
+    "tipo": "concepto",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "requiere:aws",
+      "legacy:edge-computing"
+    ],
+    "pregunta": "**EDGE COMPUTING (cómputo en el borde)**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Ejecutar código o guardar datos en puntos cercanos al usuario o al dispositivo, en vez de en un solo centro de datos lejano.\n\n**Sirve para** Bajar la latencia (el tiempo de ida y vuelta) y el tráfico hacia el centro, y decidir rápido cerca del usuario.\n\n**Ojo** Si el código está cerca del usuario pero la base de datos sigue lejos, igual esperas esa distancia.\n\n**Analogía** Un servicio normal en la nube corre en una *región*, por ejemplo São Paulo. Un usuario en Madrid le habla a ese centro de datos, y la distancia suma milisegundos a cada petición. *Edge computing* es mover parte del trabajo a puntos cercanos al usuario (los PoP de una red de entrega de contenido, torres de telefonía, o incluso el propio dispositivo). Sirve para lo que se decide rápido y con poco dato: validar una sesión, redirigir, cambiar encabezados, probar una variante A/B, filtrar datos de sensores antes de enviarlos. La nube central sigue haciendo lo pesado y lo que necesita los datos completos. Hay dos sentidos de la palabra, y conviene no mezclarlos: el *edge de red* (código en una red global de servidores) y el *edge de dispositivos* (cómputo en la fábrica, el auto o la cámara).\n\n**En simple** Imagina que tu cocina central queda al otro lado del país. Cada vez que pides algo, tarda en llegar. Con *edge*, ponen mini cocinas cerca de tu casa: las cosas simples las resuelven ahí y solo mandan a la cocina grande lo que de verdad lo necesita.",
+    "explicacion": "**Cuidado**\n- **Latencia a la base de datos.** Poner la función en el borde pero dejar los datos lejos puede salir peor que tenerlo todo en una región. Mide el recorrido completo, no solo la primera etapa.\n- **Runtime limitado.** El borde suele ofrecer APIs más acotadas que un servidor Node completo y límites de CPU y memoria más estrictos. No todo el código corre ahí.\n- **Consistencia de datos.** Datos replicados en muchos puntos pueden estar desfasados un instante. Para saldos o permisos, la fuente de verdad es una sola.\n- **Más puntos de despliegue.** Más lugares donde algo puede fallar o quedar desactualizado, y más difícil de depurar.\n- **“Edge” es una palabra de marketing flexible.** Pregunta siempre dónde corre exactamente y cuántos puntos hay. No todos los proveedores que dicen edge tienen un nodo en tu ciudad.\n\n**Para practicar**\n- Mide la latencia de tu app desde otro país (una herramienta de prueba global) y compárala con la tuya.\n- De una app tuya, lista tres cosas que podrían resolverse sin hablar con la base de datos. Esas son las candidatas a edge.\n- Anota cuántas consultas hace una petición típica a la base. Si son varias, multiplícalas por la distancia al centro.\n\n**Por qué importa** Te ayuda a distinguir tres ideas que se confunden: el **cloud central** (una región), **serverless** (quién opera) y **edge** (dónde corre). Una función puede ser serverless sin estar en el borde, y una función en el borde puede estar lejos de tus datos. La tarjeta de Edge Functions de Supabase se entiende solo con esta distinción.\n\nFuente: [Cloudflare · Qué es edge computing](https://www.cloudflare.com/learning/serverless/what-is-edge-computing)",
+    "ejemplo": "**La idea en un diagrama**\n```text\nSIN edge\nUsuario (Madrid) ───────────────► Región AWS (São Paulo)\n                 ida y vuelta larga\n\nCON edge\nUsuario (Madrid) ──► Nodo cercano (Madrid)\n                          │  lo simple se resuelve aquí\n                          └──► Región central, solo si hace falta\n```\nEl beneficio es menor distancia. No es magia: lo que necesite hablar con el centro igual paga ese viaje.\n\n**Qué sí conviene hacer en el borde**\n```text\n- Verificar un token o una cookie antes de dejar pasar\n- Redirigir según país o idioma\n- Agregar o quitar encabezados HTTP\n- A/B testing\n- Responder desde caché\n- En IoT: filtrar y resumir datos del sensor antes de subirlos\n```\nTrabajos cortos, sin mucho estado y que no dependen de una base de datos lejana.\n\n**La trampa: el código en el borde y los datos en el centro**\n```text\nUsuario (Madrid) → función en el borde (Madrid): 10 ms\nFunción → base de datos (São Paulo):   200 ms  × 3 consultas\nTotal ≈ 600 ms\n\nAlternativa: correr la función cerca de la base de datos\n(en Supabase, \"regional invocation\"), porque aquí\nlo que domina es hablar con la base, no el usuario.\n```\nLos números son ilustrativos, no mediciones. La regla es medir dónde está el tiempo antes de decidir dónde poner el código.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:10.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:10.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "856fb29f-209a-4df7-b3a5-fcd2033710ee",
+    "tipo": "concepto",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:smtp"
+    ],
+    "pregunta": "**SMTP — Simple Mail Transfer Protocol**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** El protocolo estándar con el que se envían correos entre programas y servidores (Simple Mail Transfer Protocol).\n\n**Sirve para** Que tu app mande correos (confirmación de cuenta, avisos) a través de un servidor de correo con tus credenciales.\n\n**Ojo** Para enviar desde una app se usa el puerto 587 (STARTTLS) o el 465 (TLS implícito), no el 25.\n\n**Analogía** SMTP es el protocolo de *envío*. Tu aplicación se conecta a un servidor SMTP, se identifica, le entrega el mensaje (remitente, destinatario, asunto, cuerpo) y ese servidor lo transmite hacia el servidor del destinatario. Hay dos usos distintos, con puertos distintos: el *envío desde un cliente o app* (submission), que va por el puerto 587 con STARTTLS (RFC 6409) o por el 465 con TLS implícito (reconfirmado por RFC 8314), y la *transferencia entre servidores* (relay), que usa el puerto 25 (RFC 5321). Para una aplicación, la regla es: usa 587 o 465, con autenticación, nunca el 25. En Supabase, el caso más común es el *SMTP personalizado* de Auth, para que los correos de confirmación y de recuperación salgan desde tu dominio con tu proveedor.\n\n**En simple** Imagina el correo postal. SMTP es el cartero que lleva tu carta de la oficina de correos hasta la oficina del destinatario. No es el buzón donde la recibes (eso es otro protocolo, como IMAP): solo se encarga de llevarla.",
+    "explicacion": "**Cuidado**\n- **Enviar no es entregar.** Un correo puede salir bien y terminar en spam. Para que llegue hay que configurar en el DNS del dominio los registros SPF, DKIM y DMARC.\n- **No uses el puerto 25 para enviar desde una app.** Muchos proveedores y nubes lo bloquean para frenar el spam, y no está pensado para eso.\n- **Cuida el seguimiento de enlaces.** Algunos proveedores reescriben los enlaces de los correos y pueden romper los enlaces de confirmación de Auth. Supabase recomienda desactivar el link tracking.\n- **El SMTP incorporado de Supabase es solo para probar.** Tiene límites muy bajos de envíos por hora. Para producción se configura un SMTP propio.\n- **Las credenciales SMTP son secretos con poder.** Con ellas se puede mandar correo en nombre de tu dominio. Rótalas si se filtran.\n- **Un correo no es una transacción.** Puede fallar, demorar o llegar duplicado. Si es crítico, guarda el estado del envío y reintenta con cuidado.\n\n**Para practicar**\n- Busca en la documentación de tu proveedor de correo qué puerto y qué seguridad recomienda, y compáralo con la tabla de arriba.\n- Mira las cabeceras de un correo que te llegó (“ver original”) y busca SPF, DKIM y DMARC con resultado pass o fail.\n- En un proyecto de prueba de Supabase, abre la configuración de SMTP de Auth y mira qué campos pide.\n- Revisa en el DNS de tu dominio si existen los registros TXT de SPF y DMARC.\n\n**Por qué importa** Cada app que envía correos de confirmación o avisos usa SMTP, directamente o a través de una API que lo envuelve. Saber qué puerto sirve para qué evita horas de “no funciona”, y conectarlo con Supabase te ahorra el choque típico: la Edge Function que intenta conectarse al 587 y no puede.\n\nFuentes: [RFC 5321 · SMTP](https://www.rfc-editor.org/rfc/rfc5321), [RFC 6409 · Message Submission](https://www.rfc-editor.org/rfc/rfc6409), [RFC 8314 · TLS para correo](https://www.rfc-editor.org/rfc/rfc8314)",
+    "ejemplo": "**Los puertos, qué es cada uno**\n```text\n25   servidor ↔ servidor (relay)           RFC 5321\n587  app → servidor, STARTTLS               RFC 6409\n465  app → servidor, TLS desde el inicio    RFC 8314\n2525 alternativa de algunos proveedores, sin RFC\n\nSTARTTLS: parte en texto plano y \"sube\" a cifrado.\nTLS implícito: cifrado desde el primer byte.\n```\nRFC 8314 recomienda TLS implícito cuando se puede. En la práctica, usa el que tu proveedor documente.\n\n**Los cuatro datos que siempre hay que configurar**\n```text\nServidor:   smtp.tu-proveedor.com\nPuerto:     587   (o 465)\nSeguridad:  STARTTLS (o TLS/SSL)\nUsuario y contraseña (o clave de API) del proveedor\n```\nEsos datos son secretos: van en variables de entorno o en un gestor de secretos, nunca en el código ni en el frontend.\n\n**Mandar correo desde una Edge Function de Supabase**\n```ts\n// Conexión SMTP directa al puerto 587\n// → la plataforma NO permite conexiones salientes\n//   a los puertos 25 y 587 desde Edge Functions.\n\n// Alternativas:\n// 1. SMTP por el puerto 465\n// 2. La API HTTP del proveedor de correo (más común)\n// 3. SMTP personalizado en Supabase Auth,\n//    para los correos de autenticación\n```\nLa documentación de límites de Edge Functions lo indica. Por eso muchos proveedores ofrecen una API HTTP, que sí pasa por el puerto 443.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:11.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:11.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "0595084b-36c8-4d28-b17b-2da21eefdf63",
+    "tipo": "concepto",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sftp"
+    ],
+    "pregunta": "**SFTP — SSH File Transfer Protocol**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Un protocolo para subir, bajar y administrar archivos en un servidor remoto, cifrado y apoyado en SSH.\n\n**Sirve para** Intercambiar archivos con terceros (bancos, clientes, proveedores) de forma segura y programada.\n\n**Ojo** No es FTP con candado: es otro protocolo. No confundirlo con FTPS.\n\n**Analogía** SFTP funciona sobre *SSH*, el mismo canal seguro que se usa para administrar servidores por terminal. Usa normalmente un solo puerto, el 22, tanto para los comandos como para los datos, y se autentica con usuario y contraseña o, mejor, con *claves SSH*. Es un protocolo distinto de FTP. Además existe *FTPS*, que sí es el FTP de siempre con una capa TLS, y usa varios puertos (el 21 y rangos de datos). Los dos cifran, pero no son compatibles entre sí. SFTP se usa mucho para integraciones empresariales: un proveedor deja un archivo CSV cada noche y tu sistema lo recoge. En AWS, el servicio *Transfer Family* ofrece un servidor SFTP gestionado que guarda los archivos directamente en S3.\n\n**En simple** Imagina un casillero con llave en la entrada de un edificio. Alguien te da una llave especial y solo con ella puedes dejar o sacar archivos. Todo lo que pasa por ese casillero va en una caja cerrada, así nadie en el camino puede mirarlo.",
+    "explicacion": "**Cuidado**\n- **No es FTP con cifrado.** Pedir “FTP seguro” puede significar SFTP o FTPS, y no se parecen. Pregunta cuál exactamente, con qué puerto y con qué método de autenticación.\n- **Una conexión larga y con estado no calza con serverless.** Una función de tiempo limitado que abre una sesión SFTP puede quedarse corta con archivos grandes. Para integraciones de archivos, un servicio gestionado o un proceso programado suele encajar mejor.\n- **Lee los archivos de forma defensiva.** Un archivo que llega puede venir incompleto o repetido. Valida el formato, verifica que terminó de subir y haz el procesamiento idempotente.\n- **Mínimo privilegio también aquí.** Un usuario SFTP debería ver solo su carpeta. AWS Transfer Family lo permite con directorios de inicio y políticas de IAM.\n- **Rotación y caducidad de claves.** Las integraciones se olvidan y las claves quedan vivas por años. Anota quién las tiene y cuándo se cambian.\n- **El puerto 22 es objetivo de ataques automáticos.** Restringe por IP cuando se pueda y desactiva la contraseña a favor de claves.\n\n**Para practicar**\n- Genera un par de claves con `ssh-keygen -t ed25519` y mira qué contiene cada archivo (sin compartir el privado).\n- Si tienes acceso a algún servidor, conéctate con `sftp` y practica `ls`, `put` y `get`.\n- Escribe en una línea la diferencia entre SFTP y FTPS, incluyendo el puerto, sin mirar la tarjeta.\n- Imagina que un proveedor te deja un CSV cada noche. Dibuja los pasos para procesarlo sin duplicar ni perder filas.\n\n**Por qué importa** SFTP sigue siendo una forma muy usada de intercambiar archivos con terceros, y la sigla se presta a confusión con FTPS. Saber que va sobre SSH y por un puerto te permite configurar firewalls, elegir autenticación y decidir qué servicio lo aloja, en vez de aprender por prueba y error.\n\nFuente: [AWS Transfer Family · Guía](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html)",
+    "ejemplo": "**Usarlo desde la terminal**\n```bash\nsftp -i ~/.ssh/mi_clave usuario@sftp.proveedor.com\n\nsftp> ls\nsftp> get reporte_2026-10-14.csv\nsftp> put respuesta.csv\nsftp> bye\n```\nEl mismo comando funciona contra un servidor de AWS Transfer Family: cambias el host y la clave. Los comandos (ls, get, put) son los básicos.\n\n**SFTP vs FTPS vs FTP**\n```text\nFTP    sin cifrar                        puerto 21\nFTPS   FTP + TLS                         21 y rangos de datos\nSFTP   archivos sobre SSH (otro protocolo)  22, un solo puerto\n```\nDos de las tres cifran, pero solo SFTP lo hace por un único puerto. Eso simplifica mucho las reglas de firewall.\n\n**Autenticar con clave y no con contraseña**\n```bash\n# 1. Generas un par de claves en tu máquina\nssh-keygen -t ed25519 -f ~/.ssh/mi_clave\n\n# 2. Entregas la PÚBLICA (mi_clave.pub) al proveedor\n# 3. La PRIVADA (mi_clave) no sale nunca de tu control\n```\nQuien tenga tu clave privada entra como tú. Trátala como una contraseña.\n\n**Qué NO hacer**\n```text\n- Dejar la contraseña del SFTP en el código\n- Guardar la clave privada en el repositorio\n- Aceptar la huella del servidor sin verificarla\n- Dar acceso a toda una carpeta cuando bastaba una\n```\nLa primera vez que te conectas, el cliente muestra la huella del servidor. Confírmala por otro canal antes de aceptarla.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:12.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:12.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "ffc932c1-0bc0-4275-aebf-dfdf4610d9dd",
+    "tipo": "concepto",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "requiere:serverless",
+      "requiere:edge-computing",
+      "legacy:supabase-edge-functions"
+    ],
+    "pregunta": "**Edge Functions de Supabase**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Funciones de TypeScript que corren en el servidor, en una red global, sobre el runtime abierto de Deno. Se disparan con una llamada HTTP.\n\n**Sirve para** Lo que no debe hacerse en el navegador ni cabe en SQL: webhooks, integrar terceros como Stripe, usar secretos, llamar a una IA.\n\n**Ojo** Por defecto exigen un JWT válido; con la clave de servicio saltas RLS, así que ese código se revisa con lupa.\n\n**Analogía** Una *Edge Function* de Supabase es código TypeScript que corre en el servidor, no en el navegador. Supabase la despliega en una red global, cerca de los usuarios, y la ejecuta con *Deno*, un runtime abierto basado en V8. Es serverless: se crea cuando llega una petición y no administras servidores. La llamas por HTTP (`supabase.functions.invoke` o un POST a `/functions/v1/nombre`), y recibe automáticamente variables para hablar con tu proyecto (la URL y las claves). Sirve para lo que no debe vivir en el cliente (secretos, llaves de terceros), para webhooks entrantes (Stripe, GitHub), para integraciones y para tareas que no se expresan bien en SQL. **No es lo mismo que una función de base de datos** (la de la tarjeta RPC): esa corre dentro de Postgres, junto a los datos, y se escribe en SQL o PL/pgSQL. La Edge Function corre fuera de la base de datos y habla con ella por la red.\n\n**En simple** Imagina un mensajero que vive cerca de ti. Le das un papel con una orden, él hace la tarea con la llave especial que tiene guardada (que tú no tienes) y te devuelve la respuesta. Tú nunca ves la llave.",
+    "capa": "Edge Functions",
+    "explicacion": "**Cuidado**\n- **El límite de CPU es de 2 segundos por petición** (sin contar la espera de entrada y salida), con 256 MB de memoria. El tiempo total (wall clock) es de 150 s en el plan gratuito y 400 s en los de pago, y 150 s de espera máxima por respuesta. Verifica los valores vigentes, porque la documentación se ha actualizado.\n- **La service_role se salta RLS.** Si en la función creas el cliente con esa clave, ya no hay políticas que te protejan: la validación de quién es el usuario y qué puede hacer pasa a ser tu código. Prefiere un cliente con el JWT del usuario cuando puedas.\n- **Con `verify_jwt = false` estás solo.** Cualquiera en internet puede llamar la URL. Verifica una firma o una clave secreta dentro de la función, y compárala en tiempo constante.\n- **CORS no viene configurado por ti.** Si el navegador la llama, necesitas responder el preflight (OPTIONS) y poner los encabezados. Un `*` en producción deja a cualquier sitio leer las respuestas.\n- **No puedes conectarte a los puertos 25 y 587.** Para correo usa una API HTTP o el 465 (tarjeta de SMTP).\n- **Los secretos se guardan como secretos del proyecto,** no en el repositorio. Los nombres que empiezan con `SUPABASE_` están reservados.\n- **Cada llamada pública cuesta.** Una función abierta sin límites puede costar dinero y gatillar abusos.\n\n**Para practicar**\n- Con la CLI de Supabase, crea una función con `supabase functions new saludo` y córrela en local con `supabase functions serve`.\n- Llámala con `curl` sin el encabezado Authorization y observa el 401. Luego agrega un JWT válido.\n- Cambia `verify_jwt` a false para una función de prueba y escribe cómo vas a autenticar al que llama.\n- Escribe en dos líneas qué tarea tuya iría en una Edge Function y cuál en una función SQL expuesta como RPC, y por qué.\n\n**Por qué importa** Junta las ideas de las tarjetas anteriores: es serverless (quién opera), corre en el borde (dónde) y, al ser código con secretos, es una puerta que tú diseñas. Sin entender que corre fuera de Postgres, se confunde con las funciones SQL; y sin entender verify_jwt y service_role, se abre un hueco que RLS ya no cubre.\n\nFuentes: [Supabase · Edge Functions](https://supabase.com/docs/guides/functions), [Supabase · Proteger Edge Functions](https://supabase.com/docs/guides/functions/auth), [Supabase · Límites de Edge Functions](https://supabase.com/docs/guides/functions/limits)",
+    "ejemplo": "**Una Edge Function mínima (ejemplo genérico)**\n```ts\n// supabase/functions/saludo/index.ts\nDeno.serve(async (req) => {\n  const { nombre } = await req.json();\n  return new Response(\n    JSON.stringify({ mensaje: \"Hola, \" + nombre }),\n    { headers: { \"Content-Type\": \"application/json\" } },\n  );\n});\n\n// Desplegar:  supabase functions deploy saludo\n```\nRecibe una petición y devuelve una respuesta. Ese es todo el contrato: un handler HTTP.\n\n**Llamarla desde la app, con la sesión del usuario**\n```ts\nconst { data, error } = await supabase.functions.invoke(\n  \"saludo\",\n  { body: { nombre: \"Juan\" } }\n);\n```\nEl cliente envía el JWT de la sesión en la cabecera Authorization. Con verify_jwt activo (el valor por defecto), la plataforma lo valida antes de ejecutar tu código.\n\n**Un webhook: el único caso típico sin JWT de usuario**\n```ts\n// supabase/config.toml\n[functions.stripe-webhook]\nverify_jwt = false\n\n// Y DENTRO de la función hay que verificar tú\n// la firma del proveedor (por ejemplo Stripe-Signature).\n```\nStripe no tiene un JWT de Supabase. Al apagar verify_jwt, el control ya no lo hace la plataforma: lo haces tú, con la firma del proveedor. Es el patrón que documenta Supabase.\n\n**Edge Function vs función de base de datos**\n```text\n                  Función de BD (RPC)        Edge Function\nDónde corre       dentro de Postgres         fuera, en el borde (Deno)\nLenguaje          SQL / PL/pgSQL             TypeScript / JavaScript\nCerca de los datos sí, en la misma máquina   no: habla por la red\nLlamar a un       difícil                    natural (fetch)\ntercero (Stripe)\nSecretos          no es su lugar             sí, como secretos del proyecto\nPermisos          rol del que llama /        tú decides el cliente:\n                  del dueño (DEFINER)        anon, usuario o service_role\n```\nRegla práctica: si es lógica sobre datos, que corra junto a los datos. Si habla con el mundo exterior o usa secretos, Edge Function.",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:13.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:13.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "e07fb510-4a36-43c7-80c3-4e66c28a11b9",
+    "tipo": "concepto",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "legacy:blockchain"
+    ],
+    "pregunta": "**BLOCKCHAIN (cadena de bloques)**\n\n¿Qué es, para qué sirve y dónde corre?",
+    "respuesta": "**Qué es** Un registro compartido (libro mayor) donde los datos se agrupan en bloques encadenados con hashes, y la red acuerda cuál es la versión válida.\n\n**Sirve para** Que varias partes que no confían entre sí compartan un registro difícil de alterar, sin depender de un dueño único.\n\n**Ojo** Si hay un dueño de confianza, una base de datos normal casi siempre es más simple, más rápida y más barata.\n\n**Analogía** Un *blockchain* es un libro mayor distribuido: muchos computadores (nodos) guardan la misma lista de transacciones agrupadas en *bloques*. Cada bloque incluye el *hash* (una huella criptográfica) del bloque anterior, así que alterar uno antiguo cambia su hash y rompe toda la cadena que viene después. Para añadir bloques nuevos, la red usa un *mecanismo de consenso* (prueba de trabajo, prueba de participación y otros) que decide cuál versión es la válida sin una autoridad central. El resultado, según el informe de NIST, es un registro resistente a manipulaciones y a prueba de alteraciones, mantenido por un grupo distribuido de participantes. Hay redes *públicas* (cualquiera participa) y *con permisos* (solo participantes autorizados). Los *contratos inteligentes* son programas que se ejecutan sobre la cadena. No es una base de datos mejor: es una forma distinta, con costos distintos, útil en un caso estrecho.\n\n**En simple** Imagina un cuaderno gigante que todos los niños del colegio tienen copiado. Cada página nueva se pega a la anterior con un sello especial que depende de lo que dice la página de antes. Si alguien intenta cambiar una página vieja en su copia, el sello ya no calza y los demás lo notan enseguida.",
+    "explicacion": "**Cuidado**\n- **Inmutable no significa verdadero.** Una blockchain garantiza que un dato no se alteró después; no garantiza que el dato fuera correcto cuando se escribió (“basura entra, basura queda”).\n- **Datos personales y derecho de supresión.** Si guardas datos personales en una cadena inmutable, borrarlos puede ser imposible. En Chile, la Ley 21.719 exige tratar los datos personales con cuidado. Guarda en la cadena solo huellas (hashes) y mantén los datos reales fuera.\n- **Rendimiento y costo.** Una red que reparte el trabajo entre muchos nodos es más lenta y cara por transacción que una base de datos central.\n- **Los oráculos son el eslabón débil.** Un contrato inteligente no sabe nada del mundo exterior: alguien tiene que entregarle los datos, y ese alguien debe ser confiable.\n- **Los contratos inteligentes tienen errores,** y si son inmutables, corregirlos es difícil o imposible. Se auditan antes de publicar.\n- **Distinguir redes públicas y con permisos.** Una red con permisos entre pocos participantes se parece mucho más a una base de datos replicada con reglas de consenso.\n\n**Para practicar**\n- Calcula el hash SHA-256 de una frase, cambia una letra y vuelve a calcularlo. Observa cómo cambia por completo (por ejemplo con `echo -n \"hola\" | sha256sum`).\n- Toma un caso que te hayan propuesto como “blockchain” y respóndele las 5 preguntas de arriba por escrito.\n- Describe cómo harías un registro de auditoría de solo-agregar en Postgres: qué tabla, qué permisos y qué políticas de RLS.\n- Lee el resumen del informe NIST IR 8202 y anota cuáles son, según él, las limitaciones de la tecnología.\n\n**Por qué importa** Es una de esas tecnologías que aparece en reuniones como solución para todo. Entender qué problema resuelve (confianza entre partes sin un árbitro) te permite decir con fundamentos que, en la mayoría de los proyectos, la respuesta es una base de datos bien diseñada, y reconocer el caso raro en que no lo es.\n\nFuente: [NIST IR 8202 · Blockchain Technology Overview](https://csrc.nist.gov/pubs/ir/8202/final)",
+    "ejemplo": "**La cadena, en miniatura**\n```text\nBloque 1            Bloque 2            Bloque 3\ndatos: A→B  10      datos: B→C  4       datos: C→A  2\nhash previo: 0      hash previo: H1     hash previo: H2\nhash: H1            hash: H2            hash: H3\n\nSi alguien cambia los datos del Bloque 1:\n  H1 cambia → el \"hash previo\" del Bloque 2 ya no calza\n  → todos los bloques siguientes quedan inválidos.\n```\nEsto es lo que da la propiedad de “evidencia de manipulación”. No impide que alguien escriba algo falso al inicio, solo que lo cambie después sin que se note.\n\n**Cuándo SÍ podría tener sentido**\n```text\n- Varias organizaciones que no confían entre sí\n- Ninguna quiere (o puede) ser el \"dueño\" del registro\n- Importa la trazabilidad y que nadie reescriba el pasado\n- Se acepta pagar el costo de coordinar a todos\n```\nEs la excepción, no la regla. Todas las condiciones tienen que cumplirse a la vez.\n\n**Cuándo una base de datos normal basta (la mayoría)**\n```text\n- Una sola empresa o equipo controla los datos\n- Hay un administrador de confianza\n- Necesitas corregir errores, borrar datos (por ejemplo,\n  por una ley de datos personales) y ser rápido\n- Quieres consultas, índices y transacciones simples\n\n→ Postgres, con RLS, auditoría y respaldos.\n```\nUn registro de auditoría de solo-agregar (append-only) en Postgres, con permisos estrictos, resuelve gran parte de lo que la gente imagina que necesita una blockchain.\n\n**Las preguntas para decidir**\n```text\n1. ¿Hay varias partes que escriben datos?\n2. ¿Esas partes desconfían entre sí?\n3. ¿Se pueden poner de acuerdo en un tercero de confianza?\n   (un administrador, un auditor, una autoridad)\n4. ¿Necesito que NADIE pueda borrar ni corregir?\n   ¿Choca con alguna ley que exija borrar datos?\n5. ¿Cuánto tráfico y qué latencia necesito?\n\n\"No\" en 1 o 2, o \"sí\" en 3 → base de datos normal.\n```\nEs una guía, no una fórmula. La pregunta 4 es la que más se subestima: lo que no se puede borrar tampoco se puede corregir.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:14.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:14.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "6d105cd7-51bc-4efd-b8c0-482c645b2d12",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rls-1"
+    ],
+    "pregunta": "Activas RLS en una tabla nueva, pero todavía no creas ninguna política. Un usuario autenticado hace un SELECT. ¿Qué recibe?",
+    "respuesta": "**Correcta:** Ninguna fila",
+    "opciones": [
+      "Todas las filas, porque tiene sesión iniciada",
+      "Ninguna fila",
+      "Un error de sintaxis",
+      "Solo las filas donde user_id coincide con su id"
+    ],
+    "correcta": 1,
+    "capa": "Base de datos",
+    "explicacion": "Con RLS activado y sin políticas, el acceso se deniega por defecto para los roles sujetos a RLS. Una tabla sin RLS activado es la que queda abierta.\n\nFuente: [Supabase · Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:15.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:15.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "a83b6e14-483c-43a0-82b9-a9ab48e1b842",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rls-2"
+    ],
+    "pregunta": "En una política de UPDATE, ¿para qué sirve la cláusula WITH CHECK?",
+    "respuesta": "**Correcta:** Para validar cómo queda la fila después del cambio",
+    "opciones": [
+      "Para filtrar qué filas existentes puede ver el usuario",
+      "Para validar cómo queda la fila después del cambio",
+      "Para acelerar la consulta con un índice",
+      "Para dar el permiso UPDATE al rol"
+    ],
+    "correcta": 1,
+    "capa": "Base de datos",
+    "explicacion": "USING selecciona las filas que ya existen; WITH CHECK valida las filas nuevas o modificadas. Sin él, un usuario podría reasignar user_id a otra persona.\n\nFuente: [Supabase · Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:16.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:16.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "27fa6588-d537-4a94-be51-158b1e21be65",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rls-3"
+    ],
+    "pregunta": "En un test, tu consulta devuelve todos los datos aunque la política parece correcta. ¿Qué revisas primero?",
+    "respuesta": "**Correcta:** Que no estés usando el cliente con la clave service_role",
+    "opciones": [
+      "Que no estés usando el cliente con la clave service_role",
+      "Que la tabla tenga un índice en user_id",
+      "Que el navegador no tenga caché",
+      "Que la política use mayúsculas"
+    ],
+    "correcta": 0,
+    "capa": "Base de datos",
+    "explicacion": "La clave service_role se salta RLS por completo. También conviene recordar que el dueño de la tabla lo salta salvo que uses FORCE ROW LEVEL SECURITY.\n\nFuente: [Supabase · Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:17.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:17.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "0116e6ee-f671-4b6e-a947-9850f87d02e9",
+    "tipo": "desafio_codigo",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rls-c"
+    ],
+    "pregunta": "Dada la tabla public.notas (id uuid, user_id uuid, texto text), escribe el SQL para que cada usuario autenticado pueda leer, insertar y actualizar solo sus propias filas.\n\n> Pista: Empieza activando RLS. Piensa qué cláusula necesita cada operación: SELECT usa USING, INSERT usa WITH CHECK, UPDATE usa las dos.",
+    "respuesta": "```sql\nalter table public.notas enable row level security;\n\ncreate policy \"leer propias\" on public.notas\n  for select to authenticated\n  using ( (select auth.uid()) = user_id );\n\ncreate policy \"insertar propias\" on public.notas\n  for insert to authenticated\n  with check ( (select auth.uid()) = user_id );\n\ncreate policy \"actualizar propias\" on public.notas\n  for update to authenticated\n  using ( (select auth.uid()) = user_id )\n  with check ( (select auth.uid()) = user_id );\n```",
+    "capa": "Base de datos",
+    "explicacion": "**Cómo verificar tu solución**\n- Activaste RLS con ENABLE ROW LEVEL SECURITY\n- SELECT usa USING y INSERT usa WITH CHECK\n- UPDATE tiene USING y WITH CHECK\n- Las políticas son TO authenticated, no para anon\n- Comparas contra auth.uid(), no contra un valor que manda el cliente\n\nFuente: [Supabase · Row Level Security](https://supabase.com/docs/guides/auth/row-level-security)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:18.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:18.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "e6e33220-425f-43f3-8432-7f69a41fdd31",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sd-1"
+    ],
+    "pregunta": "Una función SECURITY DEFINER la creó el rol postgres y la llama un usuario authenticated. ¿Con qué permisos se ejecuta?",
+    "respuesta": "**Correcta:** Los de su dueño, el rol postgres",
+    "opciones": [
+      "Los del usuario que la llama",
+      "Los de su dueño, el rol postgres",
+      "Los del rol anon",
+      "Ninguno: falla siempre"
+    ],
+    "correcta": 1,
+    "capa": "Base de datos",
+    "explicacion": "SECURITY DEFINER ejecuta la función con los permisos de su dueño, no de quien la llama. Por eso puede consultar tablas que el usuario no podría leer directo.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:19.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:19.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "737a8add-fa50-435e-8383-7f948c38bb51",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sd-2"
+    ],
+    "pregunta": "¿Por qué conviene fijar SET search_path en una función SECURITY DEFINER?",
+    "respuesta": "**Correcta:** Para que nadie cuele un objeto falso en otro schema que la función termine usando con permisos prestados",
+    "opciones": [
+      "Es obligatorio por sintaxis",
+      "Para que sea más rápida",
+      "Para que nadie cuele un objeto falso en otro schema que la función termine usando con permisos prestados",
+      "Para que pueda ver todos los schemas"
+    ],
+    "correcta": 2,
+    "capa": "Base de datos",
+    "explicacion": "Sin search_path fijo, alguien podría crear una tabla o función con el mismo nombre en otro schema, y la función la usaría con los permisos de su dueño.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:20.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:20.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "a8b74f76-aa9a-43d4-ac07-08ea5fa2ecd9",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sd-3"
+    ],
+    "pregunta": "Creas una función SECURITY DEFINER en el schema public y no tocas sus permisos. ¿Qué riesgo concreto tienes?",
+    "respuesta": "**Correcta:** Que anon pueda ejecutarla con los permisos de su dueño",
+    "opciones": [
+      "Ninguno, SECURITY DEFINER la hace privada",
+      "Que anon pueda ejecutarla con los permisos de su dueño",
+      "Que se borre sola a los 30 días",
+      "Que ya no pueda usarse en políticas RLS"
+    ],
+    "correcta": 1,
+    "capa": "Base de datos",
+    "explicacion": "Postgres concede EXECUTE a PUBLIC por defecto y las funciones de public se exponen como API. Hay que revocar de PUBLIC y anon, y conceder solo a quien corresponda.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:21.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:21.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "6258a64f-0141-43b1-bd70-182a7c31207d",
+    "tipo": "desafio_codigo",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sd-c"
+    ],
+    "pregunta": "Escribe una función SQL is_admin(_user_id uuid) que devuelva true si el usuario está en la tabla user_roles con rol 'admin', que sea segura como SECURITY DEFINER, y quítale el permiso de ejecución a anon.\n\n> Pista: Necesitas tres cosas: SECURITY DEFINER, un search_path fijo y un REVOKE seguido de un GRANT a authenticated.",
+    "respuesta": "```sql\ncreate function public.is_admin(_user_id uuid)\nreturns boolean\nlanguage sql stable\nsecurity definer\nset search_path = public\nas $$\n  select exists (\n    select 1 from public.user_roles\n    where user_id = _user_id and role = 'admin'\n  )\n$$;\n\nrevoke execute on function public.is_admin(uuid) from public, anon;\ngrant  execute on function public.is_admin(uuid) to authenticated;\n```",
+    "capa": "Base de datos",
+    "explicacion": "**Cómo verificar tu solución**\n- Declaraste SECURITY DEFINER\n- Fijaste SET search_path\n- Usaste nombres calificados (public.user_roles)\n- Hiciste REVOKE de PUBLIC y anon\n- Concediste EXECUTE solo a authenticated",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:22.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:22.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "847de5af-211f-4a09-b7b5-f2449c5542c6",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rpc-1"
+    ],
+    "pregunta": "¿Qué hace supabase.rpc('cerrar_tarea', { p_id: 5 })?",
+    "respuesta": "**Correcta:** Llama a la función de Postgres llamada cerrar_tarea, a través de la API",
+    "opciones": [
+      "Cierra la conexión con la base de datos",
+      "Llama a la función de Postgres llamada cerrar_tarea, a través de la API",
+      "Crea una tabla llamada cerrar_tarea",
+      "Ejecuta una Edge Function con ese nombre"
+    ],
+    "correcta": 1,
+    "capa": "Base de datos",
+    "explicacion": "RPC (en el sentido de Supabase) es llamar por nombre a una función de la base de datos. No es una Edge Function: esa se llama con functions.invoke.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:23.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:23.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "3515b8f5-052f-4866-80d4-d40c10128efb",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rpc-2"
+    ],
+    "pregunta": "Una función en el schema public se expone como RPC. ¿Quién puede ejecutarla por defecto, si no cambias permisos?",
+    "respuesta": "**Correcta:** Cualquiera con acceso a la API, incluido anon, porque EXECUTE va a PUBLIC",
+    "opciones": [
+      "Solo el dueño",
+      "Solo los usuarios autenticados",
+      "Cualquiera con acceso a la API, incluido anon, porque EXECUTE va a PUBLIC",
+      "Nadie hasta que alguien la active"
+    ],
+    "correcta": 2,
+    "capa": "Base de datos",
+    "explicacion": "Cada función expuesta es API pública. Por eso se revisa con REVOKE y GRANT, y con una consulta de auditoría.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:24.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:24.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "6361caeb-315d-4ee8-81a7-ccde162aecf5",
+    "tipo": "desafio_codigo",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:rpc-c"
+    ],
+    "pregunta": "Escribe una consulta que liste las funciones SECURITY DEFINER del schema public que el rol anon puede ejecutar, mostrando nombre y dueño.\n\n> Pista: Mira las tablas de catálogo pg_proc y pg_namespace, y la función has_function_privilege.",
+    "respuesta": "```sql\nselect p.proname,\n       p.proowner::regrole as dueno\nfrom pg_proc p\njoin pg_namespace n on n.oid = p.pronamespace\nwhere n.nspname = 'public'\n  and p.prosecdef\n  and has_function_privilege('anon', p.oid, 'EXECUTE');\n```",
+    "capa": "Base de datos",
+    "explicacion": "**Cómo verificar tu solución**\n- Filtraste por el schema public\n- Usaste prosecdef para quedarte con las SECURITY DEFINER\n- Usaste has_function_privilege con el rol anon\n- Mostraste el dueño (proowner::regrole)",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:25.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:25.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "1a18c3eb-9420-4833-b6b6-40b751aeb428",
+    "tipo": "alternativas",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "legacy:bdc-1"
+    ],
+    "pregunta": "En un incidente real, un listado de la app de observaciones saturó la base y cayeron las dos apps. ¿Qué tipo de acoplamiento fue?",
+    "respuesta": "**Correcta:** De capacidad",
+    "opciones": [
+      "De datos",
+      "De identidad",
+      "De capacidad",
+      "De diseño visual"
+    ],
+    "correcta": 2,
+    "explicacion": "Compartir una base significa compartir CPU, memoria y conexiones. Los esquemas separados ordenan, pero no aíslan la capacidad.",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:26.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:26.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "95731e83-df27-4c3d-b6b2-561afe5ce64a",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:aws-1"
+    ],
+    "pregunta": "En el ARN arn:aws:ec2:sa-east-1:123456789012:instance/i-0abc, ¿qué es sa-east-1?",
+    "respuesta": "**Correcta:** La región (São Paulo)",
+    "opciones": [
+      "El ID de tu cuenta",
+      "La región (São Paulo)",
+      "El tipo de máquina",
+      "El servicio"
+    ],
+    "correcta": 1,
+    "explicacion": "El ARN lleva partición, servicio (ec2), región (sa-east-1), ID de cuenta y recurso.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:27.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:27.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "178228ab-b4ad-418b-b330-4d5da5c106c1",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:aws-2"
+    ],
+    "pregunta": "En el modelo de responsabilidad compartida de AWS, ¿qué cuidas tú?",
+    "respuesta": "**Correcta:** Lo que pones en la nube y quién entra",
+    "opciones": [
+      "El hardware y el edificio del centro de datos",
+      "Lo que pones en la nube y quién entra",
+      "Nada, AWS lo cuida todo",
+      "Solo la facturación"
+    ],
+    "correcta": 1,
+    "explicacion": "AWS cuida la infraestructura física; tú cuidas tus datos, tus permisos y tu configuración.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:28.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:28.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "161c91dc-652c-441a-a989-7a4cacad5674",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:iam-1"
+    ],
+    "pregunta": "Una política permite s3:GetObject sobre un bucket y otra lo niega sobre el mismo recurso. ¿Qué pasa?",
+    "respuesta": "**Correcta:** Se deniega: un deny explícito gana a cualquier allow",
+    "opciones": [
+      "Se permite, gana la más específica",
+      "Se deniega: un deny explícito gana a cualquier allow",
+      "Depende del orden en que se crearon",
+      "Se permite si eres administrador"
+    ],
+    "correcta": 1,
+    "explicacion": "En la evaluación de IAM, un deny explícito en cualquier política anula los allow.\n\nFuente: [AWS IAM · Lógica de evaluación de políticas](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:29.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:29.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "44b564d0-475a-40d1-872f-33f84ec02d54",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:iam-2"
+    ],
+    "pregunta": "Un usuario nuevo no tiene ninguna política asociada. Intenta leer un bucket. ¿Resultado?",
+    "respuesta": "**Correcta:** Denegado: por defecto todo se deniega (deny implícito)",
+    "opciones": [
+      "Permitido, es de la misma cuenta",
+      "Denegado: por defecto todo se deniega (deny implícito)",
+      "Permitido solo lectura",
+      "Depende de la región"
+    ],
+    "correcta": 1,
+    "explicacion": "Por defecto todas las solicitudes se deniegan. Un allow explícito en una política de identidad o de recurso es lo que las habilita.\n\nFuente: [AWS IAM · Lógica de evaluación de políticas](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:30.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:30.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "13578e7e-7e9f-4e5d-b229-8e94a1ba11d6",
+    "tipo": "desafio_codigo",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:iam-c"
+    ],
+    "pregunta": "Escribe una política de IAM (JSON) que permita únicamente leer objetos de la carpeta entrada/ del bucket mi-bucket.\n\n> Pista: Una sola acción de S3, y el recurso es un ARN que termina en /entrada/*.",
+    "respuesta": "```json\n{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [{\n    \"Effect\": \"Allow\",\n    \"Action\": [\"s3:GetObject\"],\n    \"Resource\": \"arn:aws:s3:::mi-bucket/entrada/*\"\n  }]\n}\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- Effect es Allow\n- La única acción es s3:GetObject\n- El recurso es el ARN de la carpeta, no *\n- No usaste comodines como s3:*\n\nFuente: [AWS IAM · Lógica de evaluación de políticas](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_evaluation-logic_policy-eval-denyallow.html)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:31.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:31.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "43e5b6b9-f134-4a9f-8009-69aebe1cd505",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:ec2-1"
+    ],
+    "pregunta": "Detienes (stop) una instancia EC2 que tiene un volumen EBS. ¿Qué es cierto?",
+    "respuesta": "**Correcta:** Dejas de pagar el cómputo, pero el volumen EBS sigue cobrando",
+    "opciones": [
+      "Se borra todo y no cobran nada",
+      "Dejas de pagar el cómputo, pero el volumen EBS sigue cobrando",
+      "Sigue cobrando lo mismo que encendida",
+      "La instancia se elimina y no se puede reiniciar"
+    ],
+    "correcta": 1,
+    "explicacion": "Detener una instancia pausa el cobro de cómputo; el almacenamiento EBS sigue existiendo y cobrando. Terminarla sí la elimina.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:32.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:32.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "246cf66b-9c8f-47cf-a2aa-28f9644f7067",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:bed-1"
+    ],
+    "pregunta": "Una función Lambda va a llamar a un modelo de Amazon Bedrock. ¿Qué necesita para poder hacerlo?",
+    "respuesta": "**Correcta:** Un rol de ejecución con permiso para invocar ese modelo",
+    "opciones": [
+      "Que la cuenta root la ejecute",
+      "Un rol de ejecución con permiso para invocar ese modelo",
+      "Una clave pública en el código",
+      "Nada, Bedrock es público"
+    ],
+    "correcta": 1,
+    "explicacion": "Todo en AWS pasa por IAM: el rol de ejecución define lo que la función puede hacer. Se le da solo el permiso necesario.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:33.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:33.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "6aed65ac-9fa5-48dd-88aa-9a66d479309a",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:sl-1"
+    ],
+    "pregunta": "¿Cuál afirmación sobre serverless es correcta?",
+    "respuesta": "**Correcta:** Hay servidores, pero los administra el proveedor",
+    "opciones": [
+      "No existen servidores",
+      "Hay servidores, pero los administra el proveedor",
+      "Es siempre más barato que una máquina fija",
+      "Solo sirve para sitios estáticos"
+    ],
+    "correcta": 1,
+    "explicacion": "El nombre confunde: sí hay servidores. Lo que cambia es que provisión, parches y escalado los gestiona el proveedor, y pagas por uso.\n\nFuente: [AWS · Qué es serverless](https://aws.amazon.com/what-is/serverless-computing/)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:34.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:34.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "1707f905-0c36-4125-9393-7678bca686db",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:sl-2"
+    ],
+    "pregunta": "Una tarea corre una vez al día y dura 20 segundos. ¿Qué opción suele costar menos?",
+    "respuesta": "**Correcta:** Una función serverless que se ejecuta solo cuando toca",
+    "opciones": [
+      "Una máquina encendida las 24 horas",
+      "Una función serverless que se ejecuta solo cuando toca",
+      "Dos máquinas por redundancia",
+      "Da lo mismo"
+    ],
+    "correcta": 1,
+    "explicacion": "Con serverless no pagas por recursos inactivos. Para tráfico enorme y constante, la cuenta puede invertirse.\n\nFuente: [AWS · Qué es serverless](https://aws.amazon.com/what-is/serverless-computing/)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:35.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:35.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "a2be917e-4e67-4484-ad1e-25da53e0a2b2",
+    "tipo": "desafio_codigo",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:sl-c"
+    ],
+    "pregunta": "Esta Edge Function cuenta visitas en una variable global y a veces devuelve números que bajan. Explica por qué y arréglala usando una función SQL de Supabase.\n\n```ts\nlet visitas = 0;\nDeno.serve(() => {\n  visitas++;\n  return new Response(String(visitas));\n});\n```\n\n> Pista: No hay garantía de que dos peticiones lleguen a la misma copia de la función. El estado debe vivir fuera. ¿Qué función SQL incrementaría un contador de forma atómica?",
+    "respuesta": "```sql\n-- SQL: el estado vive en la base de datos\ncreate table public.contador (id int primary key, n bigint not null);\ninsert into public.contador values (1, 0);\n\ncreate function public.incrementar_visitas()\nreturns bigint\nlanguage sql\nsecurity invoker\nset search_path = public\nas $$\n  update public.contador set n = n + 1 where id = 1 returning n\n$$;\n```\n```ts\n// TypeScript: la Edge Function no guarda nada\n// (supabase = cliente creado con createClient, como en el otro desafío)\nDeno.serve(async () => {\n  const { data, error } = await supabase.rpc(\"incrementar_visitas\");\n  if (error) return new Response(\"error\", { status: 500 });\n  return new Response(String(data));\n});\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- Entiendes que cada copia de la función tiene su propia memoria\n- El contador vive en la base de datos\n- El incremento es atómico (un solo UPDATE ... RETURNING)\n- Revisaste quién puede ejecutar la función RPC\n\nFuente: [AWS · Qué es serverless](https://aws.amazon.com/what-is/serverless-computing/)",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:36.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:36.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "00be89e0-0897-40c7-a060-5042cb0a0eab",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:lam-1"
+    ],
+    "pregunta": "¿Cuál es el tiempo máximo de ejecución de una invocación de Lambda estándar?",
+    "respuesta": "**Correcta:** 15 minutos (900 s)",
+    "opciones": [
+      "30 segundos",
+      "5 minutos",
+      "15 minutos (900 s)",
+      "1 hora"
+    ],
+    "correcta": 2,
+    "explicacion": "La cuota de timeout de una función es de 900 segundos, y no se puede aumentar. Si la tarea no cabe, se rediseña.\n\nFuente: [AWS · Cuotas de Lambda](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:37.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:37.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "53bde0e9-3183-4b75-8b0d-c435ad1ca9e4",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:lam-2"
+    ],
+    "pregunta": "Quieres reutilizar un cliente de base de datos entre invocaciones. ¿Dónde lo creas?",
+    "respuesta": "**Correcta:** Fuera del handler, en la fase de inicialización",
+    "opciones": [
+      "Dentro del handler, en cada invocación",
+      "Fuera del handler, en la fase de inicialización",
+      "En el archivo de configuración",
+      "En una variable de entorno"
+    ],
+    "correcta": 1,
+    "explicacion": "El código fuera del handler corre al crear el entorno y se reutiliza mientras ese entorno siga vivo. Aun así, no conviene depender de que se reutilice.\n\nFuente: [AWS Compute Blog · Ciclo de vida de Lambda](https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:38.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:38.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "e5e922b8-6338-4ea5-b5af-59cacf811611",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:lam-3"
+    ],
+    "pregunta": "Una función Lambda recién creada falla por timeout, aunque tu código tarda unos 5 segundos. ¿Qué revisas?",
+    "respuesta": "**Correcta:** El timeout configurado: por defecto es de 3 segundos",
+    "opciones": [
+      "La región",
+      "El timeout configurado: por defecto es de 3 segundos",
+      "El nombre del handler",
+      "El tamaño del bucket"
+    ],
+    "correcta": 1,
+    "explicacion": "El timeout por defecto de una función Lambda es de 3 segundos. Se ajusta al trabajo real.\n\nFuente: [AWS · Cuotas de Lambda](https://docs.aws.amazon.com/lambda/latest/dg/gettingstarted-limits.html)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:39.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:39.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "cea81aac-4c0b-49ee-8aae-4a853b148840",
+    "tipo": "desafio_codigo",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "seguridad",
+      "legacy:lam-c"
+    ],
+    "pregunta": "Escribe un handler de Lambda en Python que reciba un evento con la clave \"nombre\". Si falta, debe responder 400; si viene, responder 200 con un saludo. El saludo base debe definirse fuera del handler.\n\n> Pista: Lo que va fuera del handler corre una vez por entorno. La respuesta es un diccionario con statusCode y body.",
+    "respuesta": "```python\nimport json\n\nSALUDO = \"Hola\"   # fuera del handler: se crea una vez por entorno\n\ndef handler(event, context):\n    nombre = event.get(\"nombre\")\n    if not nombre:\n        return {\n            \"statusCode\": 400,\n            \"body\": json.dumps({\"error\": \"falta nombre\"})\n        }\n    return {\n        \"statusCode\": 200,\n        \"body\": json.dumps({\"mensaje\": f\"{SALUDO}, {nombre}\"})\n    }\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- El handler recibe (event, context)\n- Validas que exista nombre y devuelves 400 si no\n- Devuelves statusCode y body\n- SALUDO está fuera del handler\n\nFuente: [AWS Compute Blog · Ciclo de vida de Lambda](https://aws.amazon.com/blogs/compute/operating-lambda-performance-optimization-part-1/)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:40.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:40.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "015ccbc8-78be-44f3-a6de-4aa1e3d6abaf",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:edg-1"
+    ],
+    "pregunta": "Tu función corre en un nodo en Madrid, pero la base de datos está en São Paulo y la función hace 3 consultas por petición. ¿Qué pasa con la latencia?",
+    "respuesta": "**Correcta:** La distancia a la base de datos domina y puede empeorar",
+    "opciones": [
+      "Mejora siempre, porque la función está cerca del usuario",
+      "La distancia a la base de datos domina y puede empeorar",
+      "Desaparece",
+      "Se reparte igual entre las 3 consultas"
+    ],
+    "correcta": 1,
+    "explicacion": "Edge acerca el código al usuario, pero no los datos. Cada consulta paga el viaje hasta la base. Supabase permite fijar la región de invocación cerca de la base.\n\nFuente: [Cloudflare · Qué es edge computing](https://www.cloudflare.com/learning/serverless/what-is-edge-computing)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:41.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:41.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "413f2d51-8021-4715-a052-d1f391687164",
+    "tipo": "alternativas",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:edg-2"
+    ],
+    "pregunta": "¿Cuál es la mejor candidata para ejecutarse en el borde?",
+    "respuesta": "**Correcta:** Redirigir al usuario según su país",
+    "opciones": [
+      "Reconstruir un índice de 200 GB",
+      "Redirigir al usuario según su país",
+      "Entrenar un modelo",
+      "Migrar el esquema de la base"
+    ],
+    "correcta": 1,
+    "explicacion": "Las tareas cortas, sin mucho estado y que no dependen de datos lejanos son las ideales para el borde.\n\nFuente: [Cloudflare · Qué es edge computing](https://www.cloudflare.com/learning/serverless/what-is-edge-computing)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:42.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:42.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "1749259a-6ef1-4bb3-ac30-b2a8f6da0e07",
+    "tipo": "desafio_codigo",
+    "categoria": "Cloud e infraestructura (AWS)",
+    "etiquetas": [
+      "legacy:edg-c"
+    ],
+    "pregunta": "Escribe un handler estilo Deno.serve que redirija (302) a /es-cl si el header cf-ipcountry vale \"CL\", y a /en en cualquier otro caso. Anota en un comentario qué debes verificar sobre ese header.\n\n> Pista: Response.redirect(url, 302). Ese header no es universal.",
+    "respuesta": "```ts\nDeno.serve((req) => {\n  // Ojo: cf-ipcountry lo agrega Cloudflare. Verifica si tu plataforma\n  // lo entrega (otra puede usar un header distinto) y qué valor trae\n  // cuando no puede determinar el país.\n  const pais = req.headers.get(\"cf-ipcountry\");\n  const destino = pais === \"CL\" ? \"/es-cl\" : \"/en\";\n  const url = new URL(destino, req.url);\n  return Response.redirect(url.toString(), 302);\n});\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- Lees el header con req.headers.get\n- Redirigiste con 302\n- Tienes un destino por defecto\n- Anotaste que el header depende de la plataforma\n\nFuente: [Cloudflare · Qué es edge computing](https://www.cloudflare.com/learning/serverless/what-is-edge-computing)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:43.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:43.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "260918f2-d5f0-4627-9dd9-2d8506d79d72",
+    "tipo": "alternativas",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:smtp-1"
+    ],
+    "pregunta": "¿Qué puerto usa una aplicación para enviar correo a un servidor SMTP con autenticación y STARTTLS?",
+    "respuesta": "**Correcta:** 587",
+    "opciones": [
+      "25",
+      "587",
+      "110",
+      "22"
+    ],
+    "correcta": 1,
+    "explicacion": "El 587 es el puerto de envío (submission), definido en RFC 6409. El 25 es para transferencia entre servidores. El 465 es la opción con TLS implícito (RFC 8314).\n\nFuente: [RFC 6409 · Message Submission](https://www.rfc-editor.org/rfc/rfc6409)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:44.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:44.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "dd6d9363-027b-499e-8557-b5c714fec9b9",
+    "tipo": "alternativas",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:smtp-2"
+    ],
+    "pregunta": "Una Edge Function de Supabase no logra conectarse a smtp.proveedor.com:587. ¿Causa más probable?",
+    "respuesta": "**Correcta:** La plataforma no permite conexiones salientes a los puertos 25 y 587",
+    "opciones": [
+      "El proveedor está caído",
+      "La plataforma no permite conexiones salientes a los puertos 25 y 587",
+      "Falta un índice en la base",
+      "El JWT venció"
+    ],
+    "correcta": 1,
+    "explicacion": "La documentación de límites lo dice. Alternativas: puerto 465, la API HTTP del proveedor o SMTP personalizado en Supabase Auth para los correos de autenticación.\n\nFuente: [Supabase · Límites de Edge Functions](https://supabase.com/docs/guides/functions/limits)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:45.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:45.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "f15bbf0b-2c4b-449a-8ad2-d23428ee40ca",
+    "tipo": "alternativas",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:smtp-3"
+    ],
+    "pregunta": "El correo sale sin error, pero llega a spam. ¿Qué revisas primero?",
+    "respuesta": "**Correcta:** Los registros SPF, DKIM y DMARC del dominio",
+    "opciones": [
+      "El puerto 25",
+      "Los registros SPF, DKIM y DMARC del dominio",
+      "El tamaño de la fuente",
+      "La versión de Deno"
+    ],
+    "correcta": 1,
+    "explicacion": "Enviar no es entregar. La reputación y la autenticación del dominio (SPF, DKIM, DMARC) pesan mucho.\n\nFuente: [Supabase · Production Checklist](https://supabase.com/docs/guides/deployment/going-into-prod)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:46.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:46.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "69e67534-a63b-44d3-a08d-80935f1a6085",
+    "tipo": "desafio_codigo",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:smtp-c"
+    ],
+    "pregunta": "Escribe una Edge Function que envíe un correo llamando a la API HTTP de un proveedor genérico (POST https://api.proveedor.com/v1/send). La clave debe venir de un secreto del proyecto, no del código, y debes manejar el error.\n\n> Pista: Deno.env.get lee secretos. El body va como JSON. Revisa res.ok.",
+    "respuesta": "```ts\nDeno.serve(async (req) => {\n  const clave = Deno.env.get(\"EMAIL_API_KEY\");\n  if (!clave) return new Response(\"falta configuración\", { status: 500 });\n\n  const res = await fetch(\"https://api.proveedor.com/v1/send\", {\n    method: \"POST\",\n    headers: {\n      \"Authorization\": \"Bearer \" + clave,\n      \"Content-Type\": \"application/json\",\n    },\n    body: JSON.stringify({\n      to: \"destino@ejemplo.com\",\n      subject: \"Hola\",\n      text: \"Mensaje de prueba\",\n    }),\n  });\n\n  if (!res.ok) return new Response(\"no se pudo enviar\", { status: 502 });\n  return new Response(\"enviado\");\n});\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- La clave viene de Deno.env.get, no está escrita en el código\n- Usas fetch por HTTPS, no una conexión SMTP al 587\n- Revisas res.ok y devuelves un error claro\n- No devuelves la clave en ninguna respuesta\n\nFuente: [Supabase · Límites de Edge Functions](https://supabase.com/docs/guides/functions/limits)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:47.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:47.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "f094baa5-c80d-4dba-8518-915da2cebd3f",
+    "tipo": "alternativas",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sftp-1"
+    ],
+    "pregunta": "¿Cuál afirmación es correcta?",
+    "respuesta": "**Correcta:** SFTP funciona sobre SSH, normalmente por un solo puerto (el 22)",
+    "opciones": [
+      "SFTP es FTP con una capa TLS",
+      "SFTP funciona sobre SSH, normalmente por un solo puerto (el 22)",
+      "SFTP y FTPS son el mismo protocolo",
+      "SFTP no cifra el contenido"
+    ],
+    "correcta": 1,
+    "explicacion": "FTPS es FTP con TLS y usa varios puertos. SFTP es otro protocolo, sobre SSH, con un solo puerto. Son incompatibles entre sí.\n\nFuente: [AWS Transfer Family · Guía](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:48.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:48.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "77de38f1-dc80-47f9-a349-a3c4b3111052",
+    "tipo": "alternativas",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sftp-2"
+    ],
+    "pregunta": "Un proveedor deja un CSV cada noche en un servidor SFTP. ¿Qué precaución es más importante al procesarlo?",
+    "respuesta": "**Correcta:** Que procesarlo dos veces no duplique filas, y verificar que terminó de subir",
+    "opciones": [
+      "Que procesarlo dos veces no duplique filas, y verificar que terminó de subir",
+      "Usar la contraseña en el código para ir más rápido",
+      "Abrir el puerto 21",
+      "Borrar el archivo antes de leerlo"
+    ],
+    "correcta": 0,
+    "explicacion": "Los archivos pueden llegar incompletos o repetidos. El procesamiento debe ser idempotente y validar el formato.",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:49.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:49.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "eb53c300-4990-48a1-87c3-53270ea177c6",
+    "tipo": "desafio_codigo",
+    "categoria": "Backend",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sftp-c"
+    ],
+    "pregunta": "Escribe los comandos para: (1) generar un par de claves ed25519, y (2) conectarte por SFTP con esa clave y descargar reporte.csv y subir respuesta.csv.\n\n> Pista: ssh-keygen para el par; sftp con -i para la clave; dentro, get y put.",
+    "respuesta": "```bash\nssh-keygen -t ed25519 -f ~/.ssh/mi_clave\n# Entregas mi_clave.pub al proveedor. mi_clave (privada) no sale de tu control.\n\nsftp -i ~/.ssh/mi_clave usuario@sftp.proveedor.com\nsftp> get reporte.csv\nsftp> put respuesta.csv\nsftp> bye\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- Generaste el par con ssh-keygen\n- Compartiste solo la clave pública\n- Usaste sftp -i con la privada\n- Usaste get y put\n\nFuente: [AWS Transfer Family · Guía](https://docs.aws.amazon.com/transfer/latest/userguide/what-is-aws-transfer-family.html)",
+    "dificultad": "intermedia",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:50.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:50.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "85ddb38e-e569-48df-ae32-f98ca96ef757",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sef-1"
+    ],
+    "pregunta": "¿Sobre qué runtime corren las Edge Functions de Supabase?",
+    "respuesta": "**Correcta:** Deno",
+    "opciones": [
+      "Node.js clásico",
+      "Deno",
+      "Python",
+      "Java"
+    ],
+    "correcta": 1,
+    "capa": "Edge Functions",
+    "explicacion": "Son funciones de TypeScript sobre Deno, un runtime abierto, desplegadas globalmente.\n\nFuente: [Supabase · Edge Functions](https://supabase.com/docs/guides/functions)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:51.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:51.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "f76ed6df-0934-40c8-a4d2-9e6663644d40",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sef-2"
+    ],
+    "pregunta": "Tu función recibe webhooks de Stripe, que no mandan un JWT de Supabase. ¿Qué haces?",
+    "respuesta": "**Correcta:** Desactivas verify_jwt en esa función y verificas la firma de Stripe dentro de ella",
+    "opciones": [
+      "Dejas verify_jwt activo y esperas",
+      "Desactivas verify_jwt en esa función y verificas la firma de Stripe dentro de ella",
+      "Haces pública la clave service_role",
+      "Cambias el webhook para que mande el JWT"
+    ],
+    "correcta": 1,
+    "capa": "Edge Functions",
+    "explicacion": "Es el patrón documentado: sin JWT de usuario, el control de quién llama pasa a ser tu código, y para un webhook eso es la verificación de la firma del proveedor.\n\nFuente: [Supabase · Proteger Edge Functions](https://supabase.com/docs/guides/functions/auth)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:52.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:52.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "84aad0b6-c07c-43f9-bf5c-ccd897b80ffe",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sef-3"
+    ],
+    "pregunta": "¿Cuál es el tiempo máximo de CPU por petición en una Edge Function (sin contar la espera de entrada y salida)?",
+    "respuesta": "**Correcta:** 2 segundos",
+    "opciones": [
+      "200 ms",
+      "2 segundos",
+      "30 segundos",
+      "15 minutos"
+    ],
+    "correcta": 1,
+    "capa": "Edge Functions",
+    "explicacion": "La documentación de límites indica 2 segundos de CPU por petición y 256 MB de memoria. El tiempo total y la espera máxima de respuesta son otros límites. Verifica los vigentes, porque cambian.\n\nFuente: [Supabase · Límites de Edge Functions](https://supabase.com/docs/guides/functions/limits)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:53.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:53.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "81be09b5-5f2c-43e9-a829-4d64716070c5",
+    "tipo": "alternativas",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sef-4"
+    ],
+    "pregunta": "Necesitas llamar a la API de Stripe con una clave secreta. ¿Dónde conviene hacerlo?",
+    "respuesta": "**Correcta:** En una Edge Function, con la clave guardada como secreto del proyecto",
+    "opciones": [
+      "En el frontend, con la clave en una variable",
+      "En una función SQL (RPC)",
+      "En una Edge Function, con la clave guardada como secreto del proyecto",
+      "En una política RLS"
+    ],
+    "correcta": 2,
+    "capa": "Edge Functions",
+    "explicacion": "Una Edge Function corre en el servidor, puede llamar a terceros con fetch y guarda secretos fuera del código. El frontend expone lo que contiene.\n\nFuente: [Supabase · Edge Functions](https://supabase.com/docs/guides/functions)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:54.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:54.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "6ecb118c-99b9-46b2-b85e-fbe0c5bc58a1",
+    "tipo": "desafio_codigo",
+    "categoria": "SUPABASE DOCS",
+    "etiquetas": [
+      "seguridad",
+      "legacy:sef-c"
+    ],
+    "pregunta": "Escribe una Edge Function que acepte solo POST, cree un cliente de Supabase con el JWT del usuario que llama (para que RLS aplique) y devuelva sus filas de la tabla notas.\n\n> Pista: createClient recibe la URL y la clave pública desde variables de entorno, y las cabeceras globales llevan el Authorization de la petición.",
+    "respuesta": "```ts\nimport { createClient } from \"npm:@supabase/supabase-js@2\";\n\nDeno.serve(async (req) => {\n  if (req.method !== \"POST\") {\n    return new Response(\"método no permitido\", { status: 405 });\n  }\n\n  const supabase = createClient(\n    Deno.env.get(\"SUPABASE_URL\")!,\n    Deno.env.get(\"SUPABASE_ANON_KEY\")!,\n    { global: { headers: { Authorization: req.headers.get(\"Authorization\")! } } },\n  );\n\n  const { data, error } = await supabase.from(\"notas\").select(\"*\");\n  if (error) return new Response(\"error\", { status: 500 });\n\n  return new Response(JSON.stringify(data), {\n    headers: { \"Content-Type\": \"application/json\" },\n  });\n});\n```",
+    "capa": "Edge Functions",
+    "explicacion": "**Cómo verificar tu solución**\n- Rechazas métodos distintos de POST\n- Usas la clave anon y el JWT del usuario, no service_role\n- Las claves vienen de Deno.env.get\n- RLS aplica porque la consulta corre como el usuario\n- Manejas el error\n\nFuente: [Supabase · Proteger Edge Functions](https://supabase.com/docs/guides/functions/auth)",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:55.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:55.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "18660ba2-bf5c-4f1b-b015-2d54652c16a3",
+    "tipo": "alternativas",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "legacy:bc-1"
+    ],
+    "pregunta": "¿Qué hace detectable la alteración de un bloque antiguo?",
+    "respuesta": "**Correcta:** Que cada bloque incluye el hash del anterior, así que cambiarlo rompe la cadena siguiente",
+    "opciones": [
+      "Que está guardado en la nube",
+      "Que cada bloque incluye el hash del anterior, así que cambiarlo rompe la cadena siguiente",
+      "Que se cifra con contraseña",
+      "Que solo el administrador puede leerlo"
+    ],
+    "correcta": 1,
+    "explicacion": "NIST describe la blockchain como un registro resistente a manipulaciones y con evidencia de alteración, gracias a los hashes encadenados y al consenso.\n\nFuente: [NIST IR 8202 · Blockchain Technology Overview](https://csrc.nist.gov/pubs/ir/8202/final)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:56.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:56.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "87613c27-3044-45bd-acc1-a536e4d0920a",
+    "tipo": "alternativas",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "legacy:bc-2"
+    ],
+    "pregunta": "Una sola empresa controla los datos, hay un administrador de confianza y la ley exige poder borrar datos personales. ¿Qué eliges?",
+    "respuesta": "**Correcta:** Una base de datos normal con auditoría y respaldos",
+    "opciones": [
+      "Una blockchain pública",
+      "Una base de datos normal con auditoría y respaldos",
+      "Una blockchain con permisos",
+      "Un archivo en un correo"
+    ],
+    "correcta": 1,
+    "explicacion": "Cuando hay un tercero de confianza y se necesita corregir o borrar, una base de datos como Postgres es más simple, rápida y adecuada.\n\nFuente: [NIST IR 8202 · Blockchain Technology Overview](https://csrc.nist.gov/pubs/ir/8202/final)",
+    "dificultad": "basica",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:57.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:57.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  },
+  {
+    "id": "94e25ca9-c014-4815-9d80-4e38f591396c",
+    "tipo": "desafio_codigo",
+    "categoria": "Arquitectura y decisiones",
+    "etiquetas": [
+      "decisión",
+      "legacy:bc-c"
+    ],
+    "pregunta": "En JavaScript (Node), escribe una función crearBloque(previo, datos) que devuelva un objeto con datos, hashPrevio y hash (SHA-256 de hashPrevio + datos), y una función verificar(cadena) que devuelva false si alguna cadena está alterada.\n\n> Pista: crypto.createHash('sha256').update(texto).digest('hex'). Para verificar, recalcula el hash de cada bloque y compara con el hashPrevio del siguiente.",
+    "respuesta": "```js\nconst crypto = require(\"crypto\");\n\nconst sha = (t) => crypto.createHash(\"sha256\").update(t).digest(\"hex\");\n\nfunction crearBloque(previo, datos) {\n  const hashPrevio = previo ? previo.hash : \"0\";\n  return { datos, hashPrevio, hash: sha(hashPrevio + datos) };\n}\n\nfunction verificar(cadena) {\n  for (let i = 0; i < cadena.length; i++) {\n    const b = cadena[i];\n    if (b.hash !== sha(b.hashPrevio + b.datos)) return false;\n    if (i > 0 && b.hashPrevio !== cadena[i - 1].hash) return false;\n  }\n  return true;\n}\n```",
+    "explicacion": "**Cómo verificar tu solución**\n- Cada bloque guarda el hash del anterior\n- El hash depende de hashPrevio y de los datos\n- verificar recalcula cada hash\n- verificar compara hashPrevio con el hash del bloque anterior\n\nFuente: [NIST IR 8202 · Blockchain Technology Overview](https://csrc.nist.gov/pubs/ir/8202/final)",
+    "dificultad": "avanzada",
+    "origen": "manual",
+    "estado": "revisada",
+    "creada": "2026-10-14T09:00:58.000Z",
+    "srs": {
+      "due": "2026-10-14T09:00:58.000Z",
+      "stability": 0,
+      "difficulty": 0,
+      "reps": 0,
+      "lapses": 0,
+      "state": "nueva"
+    }
+  }
+]
