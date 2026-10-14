@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import { Volume2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { canSpeak, speak } from '@/lib/speech'
@@ -19,6 +20,13 @@ export function SpeakButton({
   className?: string
   slow?: boolean
 }) {
+  // Se calcula tras montar: en el servidor no hay window, y declarar la tarjeta sin
+  // audio de entrada confundiría más que mostrarla habilitada un instante.
+  const [available, setAvailable] = useState(true)
+  useEffect(() => setAvailable(canSpeak()), [])
+
+  const title = available ? label : 'Audio no disponible en este navegador'
+
   return (
     <Button
       type="button"
@@ -26,9 +34,9 @@ export function SpeakButton({
       size="icon-lg"
       className={cn('size-11 rounded-full', className)}
       onClick={() => speak(text, lengua, slow ? 0.7 : 0.95)}
-      disabled={typeof window !== 'undefined' && !canSpeak()}
-      aria-label={label}
-      title={label}
+      disabled={!available}
+      aria-label={title}
+      title={title}
     >
       <Volume2 />
     </Button>
