@@ -10,10 +10,13 @@ import { Logo } from '@/components/logo'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ensureInitialLibrary } from '@/lib/bootstrap'
 import { registerServiceWorker } from '@/lib/pwa'
+import { useEffectsEnabled } from '@/hooks/use-effects-enabled'
+import { LazyParticlesBackground } from '@/components/effects/lazy-particles-background'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const focusMode = pathname === '/estudiar'
+  const effects = useEffectsEnabled()
 
   useEffect(() => {
     ensureInitialLibrary()
@@ -26,6 +29,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh">
+      {effects && <LazyParticlesBackground className="pointer-events-none fixed inset-0 -z-10" />}
       <a
         href="#contenido"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"

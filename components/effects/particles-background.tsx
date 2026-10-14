@@ -2,8 +2,14 @@
 
 import { useEffect, useRef } from 'react'
 import Particles, { ParticlesProvider, useParticlesProvider } from '@tsparticles/react'
-import type { Container } from '@tsparticles/engine'
+import type { Container, Engine } from '@tsparticles/engine'
 import { loadSlim } from '@tsparticles/slim'
+import { loadPerlinNoisePath, perlinNoisePathName } from '@tsparticles/path-perlin-noise'
+
+async function initEngine(engine: Engine) {
+  await loadSlim(engine)
+  await loadPerlinNoisePath(engine)
+}
 
 const OPTIONS = {
   fullScreen: { enable: false },
@@ -13,17 +19,24 @@ const OPTIONS = {
   pauseOnBlur: true,
   pauseOnOutsideViewport: true,
   particles: {
-    number: { value: 14, density: { enable: true, width: 900, height: 900 } },
-    color: { value: ['#022EBA', '#94A3B8'] },
-    opacity: { value: 0.22 },
-    size: { value: { min: 1, max: 3 } },
+    number: { value: 10, density: { enable: true, width: 1100, height: 1100 } },
+    shape: { type: 'emoji', options: { emoji: { value: ['🎓', '📖', '✏️'] } } },
+    opacity: { value: 0.3 },
+    size: { value: { min: 14, max: 22 } },
     links: { enable: false },
+    rotate: { value: { min: 0, max: 360 }, animation: { enable: true, speed: 2 } },
     move: {
       enable: true,
-      speed: 0.35,
+      speed: 0.6,
       direction: 'none' as const,
-      random: true,
+      random: false,
+      straight: false,
       outModes: { default: 'out' as const },
+      path: {
+        enable: true,
+        generator: perlinNoisePathName,
+        options: { sampleFactor: 2, increment: 0.001 },
+      },
     },
   },
 }
@@ -59,13 +72,14 @@ function Particulas({ className }: { className?: string }) {
 }
 
 /**
- * Fondo de partículas de muy baja densidad, derivado de la paleta de la app.
- * Solo se monta en Hoy y en el resultado de sesión (A10), nunca sobre contenido
- * que se necesite leer con precisión (Sesión de estudio, Biblioteca).
+ * Fondo de gorros de graduación, libros y lápices flotando (movimiento orgánico vía
+ * Perlin noise), con baja densidad y opacidad. Vive en AppShell (A10): visible en toda
+ * la app excepto en modo foco (Sesión de estudio), nunca interfiere con el contenido
+ * (pointer-events-none, detrás de las tarjetas opacas).
  */
 export function ParticlesBackground({ className }: { className?: string }) {
   return (
-    <ParticlesProvider init={async (engine) => { await loadSlim(engine) }}>
+    <ParticlesProvider init={initEngine}>
       <Particulas className={className} />
     </ParticlesProvider>
   )
