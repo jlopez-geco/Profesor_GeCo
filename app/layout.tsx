@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   description:
     'Autoaprendizaje con tarjetas y repetición espaciada: conceptos técnicos, desafíos de código e idiomas en sesiones de 3 a 10 minutos.',
   generator: 'v0.app',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Profesor GeCo',
+  },
   icons: {
     icon: [
       { url: '/icon-light-32x32.png', media: '(prefers-color-scheme: light)' },

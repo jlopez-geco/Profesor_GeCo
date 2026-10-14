@@ -22,7 +22,7 @@ function card(overrides: Partial<Card> = {}): Card {
   }
 }
 
-const settings: AppSettings = { limiteNuevas: 10, objetivoMinutos: 5, categorias: [] }
+const settings: AppSettings = { limiteNuevas: 10, objetivoMinutos: 5, categorias: [], efectosVisuales: true }
 
 describe('isStudyable', () => {
   it('excluye borradores', () => {

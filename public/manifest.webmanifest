@@ -1,0 +1,15 @@
+{
+  "name": "Profesor GeCo",
+  "short_name": "Prof. GeCo",
+  "description": "Tarjetas con repetición espaciada para conceptos técnicos e idiomas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8f9fc",
+  "theme_color": "#022EBA",
+  "lang": "es-CL",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/apple-icon.png", "type": "image/png", "sizes": "180x180" }
+  ]
+}

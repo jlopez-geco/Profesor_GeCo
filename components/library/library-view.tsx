@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMemo, useState } from 'react'
+import { motion } from 'motion/react'
 import { Archive, BookOpen, CheckCheck, FolderInput, LayoutGrid, List, Plus, Search, Tag, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
@@ -15,6 +16,7 @@ import { EmptyState, LoadingBlock } from '@/components/empty-state'
 import { NativeSelect } from '@/components/native-select'
 import { useCards } from '@/hooks/use-data'
 import { useCategories } from '@/hooks/use-categories'
+import { useEffectsEnabled } from '@/hooks/use-effects-enabled'
 import { tarjetasRepo } from '@/lib/tarjetas-repo'
 import { formatDate } from '@/lib/dates'
 import { SRS_STATE_LABEL } from '@/lib/srs'
@@ -30,6 +32,7 @@ export function LibraryView() {
   const params = useSearchParams()
   const cards = useCards()
   const categories = useCategories()
+  const effects = useEffectsEnabled()
 
   const [q, setQ] = useState('')
   const [categoria, setCategoria] = useState('')
@@ -239,21 +242,27 @@ export function LibraryView() {
             <EmptyState icon={Search} title="Sin resultados" description="Prueba con otros filtros o términos de búsqueda." />
           ) : view === 'lista' ? (
             <ul className="divide-y overflow-hidden rounded-2xl border bg-card">
-              {filtered.map((c) => (
-                <li key={c.id} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40">
+              {filtered.map((c, i) => (
+                <ListItem key={c.id} animate={effects} delayIndex={i} as="li" className="flex items-start gap-3 px-4 py-3 hover:bg-muted/40">
                   <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label="Seleccionar tarjeta" className="mt-1" />
                   <Link href={`/biblioteca/detalle?id=${c.id}`} className="flex min-w-0 flex-1 flex-col gap-1.5 rounded outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                     <span className="line-clamp-2 font-medium">{stripMarkdown(c.pregunta)}</span>
                     <CardMeta card={c} />
                   </Link>
                   <span className="hidden shrink-0 text-xs text-muted-foreground sm:block">{formatDate(c.creada)}</span>
-                </li>
+                </ListItem>
               ))}
             </ul>
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((c) => (
-                <li key={c.id} className={cn('relative flex flex-col gap-3 rounded-2xl border bg-card p-4', selected.has(c.id) && 'border-primary ring-1 ring-primary')}>
+              {filtered.map((c, i) => (
+                <ListItem
+                  key={c.id}
+                  animate={effects}
+                  delayIndex={i}
+                  as="li"
+                  className={cn('relative flex flex-col gap-3 rounded-2xl border bg-card p-4', selected.has(c.id) && 'border-primary ring-1 ring-primary')}
+                >
                   <Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggle(c.id)} aria-label="Seleccionar tarjeta" className="absolute top-4 right-4" />
                   <Link href={`/biblioteca/detalle?id=${c.id}`} className="flex flex-1 flex-col gap-3 rounded pr-6 outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
                     <span className="line-clamp-3 font-medium">{stripMarkdown(c.pregunta)}</span>
@@ -262,13 +271,40 @@ export function LibraryView() {
                       <CardMeta card={c} />
                     </div>
                   </Link>
-                </li>
+                </ListItem>
               ))}
             </ul>
           )}
         </div>
       )}
     </Page>
+  )
+}
+
+/** Entrada de lista animada (A10): sin efectos, es un <li>/<div> normal, sin animación. */
+function ListItem({
+  animate,
+  delayIndex,
+  as: Tag = 'li',
+  className,
+  children,
+}: {
+  animate: boolean
+  delayIndex: number
+  as?: 'li'
+  className?: string
+  children: React.ReactNode
+}) {
+  if (!animate) return <Tag className={className}>{children}</Tag>
+  return (
+    <motion.li
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.15, delay: Math.min(delayIndex, 8) * 0.02 }}
+      className={className}
+    >
+      {children}
+    </motion.li>
   )
 }
 
